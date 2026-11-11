@@ -26,7 +26,7 @@
 node --test tests/
 ```
 
-修改内置外观后，用 `UPDATE_FIXTURES=1 node --test tests/` 重写 `fixtures/`。
+修改内置外观后，用 `UPDATE_FIXTURES=1 node --test tests/` 重写 `fixtures/`。文件格式见 [FORMAT.md](FORMAT.md)。
 
 ---
 
@@ -57,7 +57,7 @@ Tests need Node 20 or newer and have no dependencies:
 node --test tests/
 ```
 
-After changing a built-in appearance, run `UPDATE_FIXTURES=1 node --test tests/` to rewrite `fixtures/`.
+After changing a built-in appearance, run `UPDATE_FIXTURES=1 node --test tests/` to rewrite `fixtures/`. The file format is described in [FORMAT.md](FORMAT.md).
 
 ## License
 
