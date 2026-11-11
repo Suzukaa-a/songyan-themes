@@ -18,19 +18,22 @@ import { renderPreview, previewMetrics } from './preview.js';
 const DRAFT_KEY = 'songyan-themes.draft.v1';
 const BASELINE_KEY = 'songyan-themes.baseline.v1';
 const LANG_KEY = 'songyan-themes.lang';
-const SECTIONS = ['basic', 'colors', 'background', 'keycap', 'candidate'];
+const SECTIONS = ['basic', 'colors', 'background', 'keycap', 'typography', 'candidate'];
 const MAX_SOURCE_BYTES = 50 * 1024 * 1024;
 const TRANSLUCENT_ROLES = ['key', 'control'];
 
 /**
- * The fields the editor shows: the ones Android and iPhone both read. Android takes only the skin's colours
- * and whether a key border exists, and from the candidate bar only the height, padding, spacing and the
- * expanded layout; the rest of a file is kept untouched but not offered.
+ * The fields the editor shows: the ones Android and iPhone both read. The rest of a file (the candidate
+ * bar's composition row, page buttons and even split, which Android does not read) is kept untouched but
+ * not offered.
  */
 const EDITABLE = new Set([
   'name', 'author', 'appearance',
   'skin.variants.light.background', 'skin.variants.dark.background',
-  'skin.keycap.borderWidth',
+  'skin.keycap.cornerRadius', 'skin.keycap.borderWidth', 'skin.keycap.shadow',
+  'skin.spacing.visualInsetX', 'skin.spacing.visualInsetY',
+  'skin.typography.family', 'skin.typography.weight',
+  'skin.typography.keySize', 'skin.typography.secondarySize', 'skin.typography.candidateSize',
   'candidateBar.collapsed.height', 'candidateBar.collapsed.cellPaddingX', 'candidateBar.collapsed.cellSpacing',
   'candidateBar.expanded.mode', 'candidateBar.expanded.columns',
   'candidateBar.expanded.rowSpacing', 'candidateBar.expanded.columnSpacing',
@@ -177,10 +180,10 @@ function updateBarHint() {
   if (!field) return;
   let hint = field.querySelector('.bar-hint');
   if (!hint) { hint = h('div', { class: 'hint bar-hint' }); field.append(hint); }
+  // Both apps grow the bar to fit large candidate text; say so only when that happens.
   const doc = normalizeDocument(state.doc);
-  hint.textContent = t('barHeightHint', {
-    ios: previewMetrics('iphone', doc).bar.height, android: previewMetrics('android', doc).bar.height,
-  });
+  const drawn = previewMetrics('android', doc).bar.height;
+  hint.textContent = drawn !== doc.candidateBar.collapsed.height ? t('barHeightHint', { height: drawn }) : '';
 }
 
 function updateEnabled() {

@@ -40,10 +40,10 @@ test('Chinese text uses full-width punctuation', () => {
   }
 });
 
-test('error paths of fields that are not shown fall back to a readable name', () => {
+test('error paths name the field, or its part of the file when it is not shown', () => {
   assert.equal(fieldLabel('zh', '$.skin.variants.light.background'), '背景（浅色）');
   assert.equal(fieldLabel('zh', '$.skin.variants.dark.background.image'), '背景（深色）');
-  assert.equal(fieldLabel('zh', '$.skin.typography.keySize'), '键盘外观');
+  assert.equal(fieldLabel('zh', '$.skin.typography.keySize'), '按键字号');
   assert.equal(fieldLabel('zh', '$.candidateBar.controls.pagePosition'), '候选栏');
   assert.equal(translator('en')('f.keycap.borderWidth'), 'Border width');
 });

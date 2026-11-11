@@ -93,8 +93,8 @@ const SKIN_FIELDS = [
   { path: 'keycap.cornerRadius', type: 'number', min: 0, max: 16, step: 0.5, default: 6, section: 'keycap' },
   { path: 'keycap.borderWidth', type: 'number', min: 0, max: 2, step: 0.5, default: 0, section: 'keycap' },
   { path: 'keycap.shadow', type: 'enum', values: ['none', 'subtle'], default: 'subtle', section: 'keycap' },
-  { path: 'spacing.visualInsetX', type: 'number', min: 0, max: 6, step: 0.5, default: 2, section: 'spacing' },
-  { path: 'spacing.visualInsetY', type: 'number', min: 0, max: 6, step: 0.5, default: 2, section: 'spacing' },
+  { path: 'spacing.visualInsetX', type: 'number', min: 0, max: 6, step: 0.5, default: 2, section: 'keycap' },
+  { path: 'spacing.visualInsetY', type: 'number', min: 0, max: 6, step: 0.5, default: 2, section: 'keycap' },
 ];
 
 const BAR_FIELDS = [
