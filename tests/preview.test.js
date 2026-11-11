@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, androidBar, iphoneToolbarCentres } from '../assets/js/preview.js';
+import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, iphoneToolbarCentres } from '../assets/js/preview.js';
 import { PRESETS, presetById } from '../assets/js/presets.js';
 import { systemDefaultDocument, normalizeDocument } from '../assets/js/format.js';
 
@@ -18,35 +18,45 @@ test('the iPhone surface is the measured system colour, not the skin panel', () 
   assert.deepEqual({ ...IOS_SURFACE }, { light: '#E0E1E8', dark: '#222223' });
 });
 
-test('Android keeps its own key metrics whatever the skin says', () => {
-  const plain = previewMetrics('android', normalizeDocument(systemDefaultDocument()));
-  const custom = previewMetrics('android', edited());
-  for (const name of ['gapX', 'rowHeight', 'capInsetX', 'capInsetY', 'radius', 'font', 'shadow', 'family']) {
-    assert.deepEqual(custom[name], plain[name], name);
+test('both platforms show the same gaps for one file', () => {
+  for (const doc of [normalizeDocument(systemDefaultDocument()), edited()]) {
+    const ios = previewMetrics('iphone', doc);
+    const android = previewMetrics('android', doc);
+    assert.equal(android.gapX + 2 * android.capInsetX, ios.gapX + 2 * ios.capInsetX);
+    assert.equal(android.rowGap + 2 * android.capInsetY, ios.rowGap + 2 * ios.capInsetY);
   }
-  assert.equal(plain.gapX, 5);
-  assert.equal(plain.radius, 8);
-  assert.equal(plain.font.letter, 22);
 });
 
-test('Android reads only whether a key border exists', () => {
+test('Android reads the skin literally, 1 pt = 1 dp', () => {
+  const m = previewMetrics('android', edited());
+  assert.equal(m.gapX, 10);
+  assert.equal(m.capInsetX, 0);
+  assert.equal(m.capInsetY, 6);
+  assert.equal(m.radius, 14);
+  assert.equal(m.border, 1.5);
+  assert.equal(m.font.letter, 26);
+  assert.equal(m.rowHeight, 60);
+});
+
+test('Android draws the Android built-in metrics from the Android built-in numbers', () => {
   const doc = normalizeDocument(systemDefaultDocument());
-  assert.equal(previewMetrics('android', doc).border, 0);
-  doc.skin.keycap.borderWidth = 0.5;
-  assert.equal(previewMetrics('android', doc).border, 1);
-  doc.skin.keycap.borderWidth = 2;
-  assert.equal(previewMetrics('android', doc).border, 1);
+  doc.skin.keycap = { cornerRadius: 8, borderWidth: 0, shadow: 'none' };
+  doc.skin.spacing = { visualInsetX: 0.5, visualInsetY: 1.25 };
+  doc.skin.typography = { ...doc.skin.typography, keySize: 22, secondarySize: 11, candidateSize: 18 };
+  doc.candidateBar.collapsed = { ...doc.candidateBar.collapsed, height: 48, cellPaddingX: 10, cellSpacing: 0 };
+  const m = previewMetrics('android', doc);
+  assert.deepEqual([m.gapX, m.capInsetY, m.radius, m.font.letter], [5, 3.25, 8, 22]);
+  assert.deepEqual([m.bar.height, m.bar.chipPad, m.bar.cellSpacing], [48, 10, 0]);
 });
 
-test('Android takes bar values only when they differ from the default bar', () => {
-  const plain = previewMetrics('android', normalizeDocument(systemDefaultDocument())).bar;
-  assert.equal(plain.height, 48);
-  assert.equal(plain.chipPad, 10);
-  assert.equal(plain.cellSpacing, 0);
+test('Android takes the bar numbers as written, topped up for large text', () => {
   const custom = previewMetrics('android', edited()).bar;
-  assert.equal(custom.height, 60);
-  assert.equal(custom.chipPad, 19);
+  assert.equal(custom.height, 52);
+  assert.equal(custom.chipPad, 16);
   assert.equal(custom.cellSpacing, 6);
+  const doc = edited();
+  doc.skin.typography.candidateSize = 44;
+  assert.equal(previewMetrics('android', doc).bar.height, 58);
 });
 
 test('iPhone draws the skin: gaps grow with the inset, radius and sizes follow the file', () => {
@@ -96,17 +106,15 @@ test('the iPhone toolbar has three equal buttons, centred as measured in the sim
   assert.equal(m.bar.height, 40);
 });
 
-test('the candidate bar draws each platform\'s own height and padding', () => {
+test('the candidate bar has the same height and padding on both platforms', () => {
   const doc = normalizeDocument(systemDefaultDocument());
   doc.candidateBar.collapsed.height = 52;
   doc.candidateBar.collapsed.cellPaddingX = 12;
-  const ios = previewMetrics('iphone', doc);
-  const android = previewMetrics('android', doc);
-  assert.equal(ios.bar.height, 52);
-  assert.equal(ios.bar.chipPad, 12);
-  assert.equal(android.bar.height, 60);
-  assert.equal(android.bar.chipPad, 15);
-  assert.deepEqual(androidBar({ height: 40, cellPaddingX: 7, cellSpacing: 0 }), { height: 48, chipPad: 10, cellSpacing: 0 });
+  for (const platform of ['iphone', 'android']) {
+    const { bar } = previewMetrics(platform, doc);
+    assert.equal(bar.height, 52, platform);
+    assert.equal(bar.chipPad, 12, platform);
+  }
 });
 
 test('every preset yields finite metrics on both platforms', () => {

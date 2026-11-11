@@ -3,8 +3,8 @@
 // and the encoding ladder are plain functions so Node tests can check them; the drawing runs in a worker
 // when the browser has OffscreenCanvas, otherwise on the page.
 
-/** The area the background covers on Android, in dp: 411 wide, 4 + 4 x 60 + 4 for the keys, 48 bar, 24 system row. */
-export const KEYBOARD_AREA = Object.freeze({ width: 411, height: 320 });
+/** The area the background covers on Android, in dp: 411 wide, a 40 bar, 4 + 4 x 60 + 4 for the keys, 48 navigation bar. */
+export const KEYBOARD_AREA = Object.freeze({ width: 411, height: 336 });
 export const MAX_SIDE = 1600;
 /** An image is kept under this so the same picture can sit in both modes inside the 2 MiB file limit. */
 export const TARGET_BYTES = 700 * 1024;

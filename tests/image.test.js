@@ -52,5 +52,5 @@ test('growing for blur keeps the frame covered', () => {
 test('the drag axis follows the picture shape', () => {
   assert.equal(slackAxis(800, 1200), 'y');
   assert.equal(slackAxis(1600, 600), 'x');
-  assert.equal(slackAxis(411, 320), null);
+  assert.equal(slackAxis(KEYBOARD_AREA.width, KEYBOARD_AREA.height), null);
 });

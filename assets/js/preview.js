@@ -61,6 +61,16 @@ export function backgroundCss(background, urlFor = imageUrl) {
 }
 
 const SYSTEM_FONT = 'system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif';
+/**
+ * Android's own faces first (Roboto, Noto Serif, Droid Sans Mono), then the nearest a desktop has. Stock
+ * Android ships no rounded face, so "rounded" draws the platform sans (KeyboardTypefaces).
+ */
+const ANDROID_FONT_STACKS = {
+  system: `Roboto, ${SYSTEM_FONT}`,
+  rounded: `Roboto, ${SYSTEM_FONT}`,
+  serif: '"Noto Serif", "PT Serif", Georgia, "Noto Serif CJK SC", "Songti SC", "Source Han Serif SC", "SimSun", serif',
+  monospaced: '"Droid Sans Mono", "Roboto Mono", "Noto Sans Mono", Menlo, Consolas, "Noto Sans Mono CJK SC", monospace',
+};
 const FONT_STACKS = {
   system: SYSTEM_FONT,
   rounded: 'ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif',
@@ -77,8 +87,6 @@ export const IOS_CORNER_SCALE = 1.75;
 
 const SQUIRCLE = typeof CSS !== 'undefined' && CSS.supports('corner-shape', 'squircle');
 
-/** The default candidate bar. Android treats a value equal to it as "not customised". */
-const DEFAULT_BAR = Object.freeze({ height: 40, cellPaddingX: 7, cellSpacing: 0 });
 const KEY_ROWS = 4;
 
 const CANDIDATES = ['你好', '拟好', '你', '尼', '泥', '呢', '妮', '拟', '逆', '倪', '腻', '匿'];
@@ -94,21 +102,6 @@ export function effectiveBarHeight(height, candidateSize) {
   return Math.max(clamped, Math.max(Math.ceil(candidateSize * 1.25 + 3), 36));
 }
 
-/**
- * What Android draws for the candidate bar's numbers (CandidateBarStyle.of): the platform's 48 dp row, 10 dp
- * cell padding and no gap while a value equals the system default's, otherwise the value plus an offset (8 dp
- * of height with a 48 dp floor, 3 dp of padding). Kept apart so it can follow the app if that changes.
- */
-export function androidBar(collapsed) {
-  const customHeight = collapsed.height !== DEFAULT_BAR.height;
-  const customPadding = collapsed.cellPaddingX !== DEFAULT_BAR.cellPaddingX;
-  return {
-    height: customHeight ? Math.max(48, clamp(collapsed.height, 36, 56) + 8) : 48,
-    chipPad: customPadding ? collapsed.cellPaddingX + 3 : 10,
-    cellSpacing: collapsed.cellSpacing !== DEFAULT_BAR.cellSpacing ? collapsed.cellSpacing : 0,
-  };
-}
-
 /** Everything the drawing needs as plain numbers, so the rules are testable without a DOM. */
 export function previewMetrics(platform, doc) {
   const { skin, candidateBar: bar } = doc;
@@ -121,25 +114,33 @@ export function previewMetrics(platform, doc) {
     colGap: bar.expanded.columnSpacing,
   };
   if (platform === 'android') {
+    // Android takes the skin literally, 1 pt = 1 dp (ImePalettes.tokensOf): keys sit 4 dp apart as iPhone key
+    // cells do, less the inset on every side, so rows tile with 4 + 2 x inset between keys across and each cap
+    // gives up half the row gap top and bottom. Row height, side padding and control labels stay Android's.
     return {
       platform,
       refWidth: 411,
       sidePad: 3,
-      gapX: 5,
+      gapX: 4 + 2 * skin.spacing.visualInsetX,
       rowHeight: 60,
       rowGap: 0,
       capInsetX: 0,
-      capInsetY: 3.25,
+      capInsetY: 2 + skin.spacing.visualInsetY,
       topPad: 4,
       bottomPad: 4,
-      radius: 8,
-      border: skin.keycap.borderWidth > 0 ? 1 : 0,
-      shadow: false,
-      family: 'system',
-      weight: 'regular',
-      font: { letter: 22, hint: 11, control: 14, space: 16, enter: 15, candidate: 18, comment: 12 },
+      radius: skin.keycap.cornerRadius,
+      border: skin.keycap.borderWidth,
+      shadow: skin.keycap.shadow === 'subtle',
+      family: type.family,
+      weight: type.weight,
+      font: {
+        letter: type.keySize, hint: type.secondarySize, control: 14, space: 16, enter: 15,
+        candidate: type.candidateSize, comment: 12,
+      },
       bar: {
-        ...androidBar(collapsed),
+        height: effectiveBarHeight(collapsed.height, type.candidateSize),
+        chipPad: collapsed.cellPaddingX,
+        cellSpacing: collapsed.cellSpacing,
         chipGap: 8,
         chipRadius: 10,
         chipInsetY: 5,
@@ -152,7 +153,7 @@ export function previewMetrics(platform, doc) {
       expanded: { ...expanded, fullRowLength: 8 },
       // Gesture navigation shows the system's own keyboard switcher, so the footer has no globe key.
       showsGlobe: false,
-      systemRow: 24,
+      systemRow: 48,
     };
   }
   const scale = type.keySize / 22;
@@ -268,7 +269,26 @@ const ANDROID_ICONS = {
   oneHand: 'M7,2h10c1.1,0 2,0.9 2,2v16c0,1.1 -0.9,2 -2,2H7c-1.1,0 -2,-0.9 -2,-2V4c0,-1.1 0.9,-2 2,-2zM7,4v16h10V4H7z M8,12h8v7H8z',
   gear: 'M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z',
   hide: 'M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6 1.41,-1.41z',
+  language: 'M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM18.92,8h-2.95c-0.32,-1.25 -0.78,-2.45 -1.38,-3.56 1.84,0.63 3.37,1.91 4.33,3.56zM12,4.04c0.83,1.2 1.48,2.53 1.91,3.96h-3.82c0.43,-1.43 1.08,-2.76 1.91,-3.96zM4.26,14C4.1,13.36 4,12.69 4,12s0.1,-1.36 0.26,-2h3.38c-0.08,0.66 -0.14,1.32 -0.14,2 0,0.68 0.06,1.34 0.14,2L4.26,14zM5.08,16h2.95c0.32,1.25 0.78,2.45 1.38,3.56 -1.84,-0.63 -3.37,-1.9 -4.33,-3.56zM8.03,8L5.08,8c0.96,-1.66 2.49,-2.93 4.33,-3.56C8.81,5.55 8.35,6.75 8.03,8zM12,19.96c-0.83,-1.2 -1.48,-2.53 -1.91,-3.96h3.82c-0.43,1.43 -1.08,2.76 -1.91,3.96zM14.34,14L9.66,14c-0.09,-0.66 -0.16,-1.32 -0.16,-2 0,-0.68 0.07,-1.35 0.16,-2h4.68c0.09,0.65 0.16,1.32 0.16,2 0,0.68 -0.07,1.34 -0.16,2zM14.59,19.56c0.6,-1.11 1.06,-2.31 1.38,-3.56h2.95c-0.96,1.65 -2.49,2.93 -4.33,3.56zM16.36,14c0.08,-0.66 0.14,-1.32 0.14,-2 0,-0.68 -0.06,-1.34 -0.14,-2h3.38c0.16,0.64 0.26,1.31 0.26,2s-0.1,1.36 -0.26,2h-3.38z',
 };
+
+/** Android's expand control: three columns by two rows of dots, the whole candidate page (drawPanelIcon). */
+function panelDots() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 22 22');
+  svg.setAttribute('class', 'pv-icon pv-filled');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const y of [8.75, 13.25]) {
+    for (const x of [6.5, 11, 15.5]) {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', String(x));
+      dot.setAttribute('cy', String(y));
+      dot.setAttribute('r', '1.5');
+      svg.append(dot);
+    }
+  }
+  return svg;
+}
 
 function androidIcon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -332,7 +352,7 @@ export function renderPreview(host, doc, options) {
   set('c-cand', android ? colors.text : contrasting(colors.text, colors.panel));
   set('c-candSecondary', android ? colors.secondaryText : contrasting(colors.secondaryText, colors.panel));
   set('c-candSelected', contrasting(colors.text, colors.selected));
-  set('font', FONT_STACKS[m.family]);
+  set('font', (android ? ANDROID_FONT_STACKS : FONT_STACKS)[m.family]);
   set('weight', WEIGHTS[m.weight]);
   // Android paints the panel colour and the skin's background over it; iPhone's surface belongs to the system.
   set('surface', android ? colors.panel : IOS_SURFACE[mode]);
@@ -381,7 +401,6 @@ export function renderPreview(host, doc, options) {
   set('exp-col-gap', m.expanded.colGap);
   set('exp-columns', m.expanded.mode === 'list' ? 1 : m.expanded.columns);
   set('keys-h', m.topPad + KEY_ROWS * m.rowHeight + (KEY_ROWS - 1) * m.rowGap + m.bottomPad);
-  set('hint-alpha', android ? 1 : 0.6);
   set('tool-pad', IPHONE_TOOLBAR.pad);
   set('tool-gap', IPHONE_TOOLBAR.gap);
 
@@ -390,12 +409,13 @@ export function renderPreview(host, doc, options) {
     reading.append(el('span', 'pv-reading-text', t('composing')));
     keyboard.append(reading);
   }
-  keyboard.append(typing ? buildStrip(t, expanded, onToggleExpand) : buildToolbar(m, t));
+  keyboard.append(typing ? buildStrip(t, expanded, onToggleExpand, android) : buildToolbar(m, t));
   keyboard.append(expanded ? buildExpanded(m) : buildKeys(m, t));
   keyboard.append(buildSystemRow(m, t));
+  if (android && !expanded) fitAndroidLabels(host, keyboard, m.refWidth);
 }
 
-function buildStrip(t, expanded, onToggleExpand) {
+function buildStrip(t, expanded, onToggleExpand, android) {
   const strip = el('div', 'pv-strip');
   const cells = el('div', 'pv-cells');
   CANDIDATES.slice(0, 8).forEach((text, index) => {
@@ -406,7 +426,7 @@ function buildStrip(t, expanded, onToggleExpand) {
   strip.append(cells);
   const button = el('button', 'pv-expand');
   button.type = 'button';
-  button.append(icon(expanded ? 'chevronUp' : 'chevronDown'));
+  button.append(android && !expanded ? panelDots() : icon(expanded ? 'chevronUp' : 'chevronDown'));
   const label = expanded ? t('collapseTip') : t('expandTip');
   button.setAttribute('aria-label', label);
   button.title = label;
@@ -465,13 +485,56 @@ function key(content, className, grow) {
   return node;
 }
 
-/** The letters of one row; the top row carries the digit hints. */
-function letterKeys(letters, rowIndex) {
+/** Android also marks the up-flick symbol of the lower rows (AlternateKeyPolicy, flick hint "up" by default). */
+const ANDROID_ROW_HINTS = [HINTS, ['，', '。', '？', '！', '、', '：', '；', '（', '）'], ['@', '-', '“', '‘', '【', '】', '/']];
+
+/** The letters of one row; the top row carries the digit hints, and on Android every row its symbols. */
+function letterKeys(letters, rowIndex, android) {
+  const hints = android ? ANDROID_ROW_HINTS[rowIndex] : rowIndex === 0 ? HINTS : [];
   return [...letters].map((letter, index) => {
     const face = [el('span', 'pv-label', letter)];
-    if (rowIndex === 0) face.push(el('span', 'pv-hint', HINTS[index]));
+    if (hints[index]) face.push(el('span', 'pv-hint', hints[index]));
     return key(face, 'letter');
   });
+}
+
+/**
+ * Android shrinks a key label that is wider than its cap less 10 dp, in 0.5 sp steps down to 9 sp
+ * (KeyboardView.fitLabels). Text width grows with its size, so one measurement per label is enough.
+ */
+function fitAndroidLabels(host, keyboard, ref) {
+  const unit = host.clientWidth / ref;
+  if (!(unit > 0)) return;
+  for (const label of keyboard.querySelectorAll('.pv-key .pv-label')) {
+    const face = label.closest('.pv-face');
+    const room = face.getBoundingClientRect().width / unit - 10;
+    const width = label.getBoundingClientRect().width / unit;
+    const base = parseFloat(getComputedStyle(label).fontSize) / unit;
+    if (width > room && base > 0) {
+      let size = base;
+      while (size > 9 && (width * size) / base > room) size -= 0.5;
+      label.style.fontSize = `calc(${size} * var(--u))`;
+    }
+    if (FULL_WIDTH_MARK.test(label.textContent)) centreInk(label, unit);
+  }
+}
+
+/** One full-width punctuation mark, whose ink does not fill its em box (FullWidthMark). */
+const FULL_WIDTH_MARK = /^[\u3000-\u303F\uFF01-\uFF0F\uFF1A-\uFF20\uFF3B-\uFF40\uFF5B-\uFF65\u2026\u2014]$/u;
+let inkCanvas = null;
+
+/** Android draws a full-width mark with its ink, not its em box, at the cap's centre. */
+function centreInk(label, unit) {
+  inkCanvas ??= document.createElement('canvas').getContext('2d');
+  if (!inkCanvas) return;
+  const style = getComputedStyle(label);
+  inkCanvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const ink = inkCanvas.measureText(label.textContent);
+  const size = parseFloat(style.fontSize);
+  const dx = ink.width / 2 - (ink.actualBoundingBoxRight - ink.actualBoundingBoxLeft) / 2;
+  const baseline = (size - (ink.fontBoundingBoxAscent + ink.fontBoundingBoxDescent)) / 2 + ink.fontBoundingBoxAscent;
+  const dy = size / 2 - (baseline + (ink.actualBoundingBoxDescent - ink.actualBoundingBoxAscent) / 2);
+  label.style.transform = `translate(calc(${(dx / unit).toFixed(2)} * var(--u)), calc(${(dy / unit).toFixed(2)} * var(--u)))`;
 }
 
 function buildKeys(m, t) {
@@ -482,9 +545,9 @@ function buildKeys(m, t) {
     if (index === 2) {
       // Shift and delete share what the seven letters leave over, as the apps solve a row with outlying controls.
       row.classList.add('pv-outlying');
-      row.append(key(icon('shift'), 'control side'), ...letterKeys(letters, index), key(icon('backspace'), 'control side'));
+      row.append(key(icon('shift'), 'control side'), ...letterKeys(letters, index, m.platform === 'android'), key(icon('backspace'), 'control side'));
     } else {
-      row.append(...letterKeys(letters, index));
+      row.append(...letterKeys(letters, index, m.platform === 'android'));
     }
     keys.append(row);
   });
@@ -505,7 +568,11 @@ function buildKeys(m, t) {
   // takes its share from the space bar; return is widened by one mark so the space bar stays centred.
   if (m.showsGlobe) bottom.append(key(icon('globe'), 'control', 1));
   bottom.append(key(el('span', 'pv-label pv-control-text', t('numbersKey')), 'control', 1.4));
-  bottom.append(key(el('span', 'pv-label pv-control-text', t('languageKey')), 'control', 1.2));
+  // Both names, the current side in the text colour and the other at 60% (drawLanguageLabel).
+  const [current, other] = t('languageKey').split('/');
+  const language = el('span', 'pv-label pv-control-text', current);
+  language.append(el('span', 'pv-dim', `/${other}`));
+  bottom.append(key(language, 'control', 1.2));
   bottom.append(key(el('span', 'pv-label', '，'), 'letter', 1));
   bottom.append(key(el('span', 'pv-label pv-space-text', t('space')), 'space', m.showsGlobe ? 3.8 : 4.8));
   bottom.append(key(el('span', 'pv-label', '。'), 'letter', 1));
@@ -522,6 +589,12 @@ function buildSystemRow(m, t) {
       holder.append(icon(name));
       holder.setAttribute('role', 'img');
       holder.setAttribute('aria-label', t(label));
+      row.append(holder);
+    }
+  } else {
+    for (const [name, cls] of [['hide', 'pv-sys-back'], ['language', 'pv-sys-switch']]) {
+      const holder = el('span', `pv-sys-icon ${cls}`);
+      holder.append(androidIcon(name));
       row.append(holder);
     }
   }
