@@ -111,7 +111,7 @@
       if (window.__songyanReady) return;
       var note = document.createElement('p');
       note.className = 'intro';
-      note.textContent = '页面没能启动。如果你是直接双击打开的文件，请换成 Firefox，或在这个文件夹里运行 python3 -m http.server 再访问 localhost:8000。 / The page did not start. If you opened it from disk, use Firefox, or run python3 -m http.server here and open localhost:8000.';
+      note.textContent = '页面无法启动，请通过网页服务器打开（例如在这个文件夹运行 python3 -m http.server）。 / The page could not start. Open it through a web server, e.g. python3 -m http.server in this folder.';
       document.querySelector('.layout').before(note);
     }, 1500);
   </script>
