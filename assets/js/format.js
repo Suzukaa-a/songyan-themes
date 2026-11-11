@@ -354,6 +354,17 @@ export function contrasting(hex, on) {
 
 export const normalizeHex = (hex) => hex.toUpperCase();
 
+/**
+ * Reads what a person types into a colour box: `#abc`, `abc`, `#aabbcc` or `aabbcc`, with stray spaces.
+ * Returns the upper-case `#RRGGBB` form, or null when it is not a colour.
+ */
+export function parseHexInput(text) {
+  const match = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(String(text).trim());
+  if (!match) return null;
+  const digits = match[1].length === 3 ? [...match[1]].map((digit) => digit + digit).join('') : match[1];
+  return `#${digits.toUpperCase()}`;
+}
+
 export const DEFAULT_COLORS = Object.freeze({
   light: Object.freeze(Object.fromEntries(['#D1D3D9', '#FFFFFF', '#ADB2BC', '#145ACC', '#000000', '#333333', '#FFFFFF', '#C2C5CC', '#ADB2BC', '#777777'].map((hex, i) => [COLOR_NAMES[i], hex]))),
   dark: Object.freeze(Object.fromEntries(['#202124', '#38393C', '#55565A', '#286CD8', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#65666A', '#55565A', '#808080'].map((hex, i) => [COLOR_NAMES[i], hex]))),
@@ -491,6 +502,15 @@ export function decodeImported(text, newId = randomId) {
     return { document: normalizeDocument(readDocument(document)), kind: 'candidateBar' };
   }
   throw new FormatError(ErrorCode.UNRECOGNIZED_DOCUMENT, '$');
+}
+
+/** Whether two documents export to the same file; used to tell if a draft has unsaved changes. */
+export function sameDocument(a, b) {
+  try {
+    return stringify(normalizeDocument(a)) === stringify(normalizeDocument(b));
+  } catch {
+    return false;
+  }
 }
 
 /** A new draft with its own identity, so it never collides with a built-in on import. */

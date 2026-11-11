@@ -244,3 +244,47 @@ test('encode refuses an invalid or mismatched draft', () => {
   rejects(() => encodeDocument(mixed), ErrorCode.IDENTITY_MISMATCH, '$.skin.id');
   rejects(() => readDocument({ ...systemDefaultDocument(), extra: true }), ErrorCode.UNKNOWN_FIELD, '$.extra');
 });
+
+test('parseHexInput accepts the shapes people type and returns #RRGGBB', async () => {
+  const { parseHexInput } = await import('../assets/js/format.js');
+  assert.equal(parseHexInput('#abc'), '#AABBCC');
+  assert.equal(parseHexInput('abc'), '#AABBCC');
+  assert.equal(parseHexInput('#aabbcc'), '#AABBCC');
+  assert.equal(parseHexInput('  1a2B3c '), '#1A2B3C');
+  for (const bad of ['', '#', '#ab', '#abcd', '#abcde', '#abcdefg', 'xyz', '##abc', '#aabbccdd']) {
+    assert.equal(parseHexInput(bad), null, bad);
+  }
+});
+
+test('sameDocument ignores formatting and tells real changes', async () => {
+  const { sameDocument, normalizeDocument } = await import('../assets/js/format.js');
+  const a = sample();
+  const b = structuredClone(a);
+  assert.ok(sameDocument(a, b));
+  b.skin.spacing.visualInsetX = 5;
+  assert.ok(!sameDocument(a, b));
+  const c = structuredClone(a);
+  c.name = `  ${c.name}  `;
+  assert.ok(sameDocument(a, c), 'names are trimmed on export');
+  assert.ok(!sameDocument(a, { broken: true }));
+  assert.ok(normalizeDocument(a));
+});
+
+test('an imported file keeps its candidate bar and candidate size unchanged', () => {
+  const text = read('appearance-grid-look.songyanappearance.json');
+  const source = JSON.parse(text);
+  const { document } = decodeImported(text);
+  assert.deepEqual(document.candidateBar, source.candidateBar);
+  assert.equal(document.skin.typography.candidateSize, source.skin.typography.candidateSize);
+});
+
+test('importing a built-in file and exporting it again only changes the identity', async () => {
+  const { withNewIdentity } = await import('../assets/js/format.js');
+  for (const name of files('.songyanappearance.json')) {
+    const text = read(name);
+    const original = decodeDocument(text);
+    const copy = withNewIdentity(original, undefined, () => 'copy-id');
+    const swapped = encodeDocument(original).replaceAll(`"${original.id}"`, '"copy-id"');
+    assert.equal(encodeDocument(copy), swapped, name);
+  }
+});
