@@ -287,7 +287,8 @@ function section(name) {
   else if (name === 'background') {
     content = [h('p', { class: 'note' }, t('backgroundAndroidOnly')), ...FIELDS.filter((row) => row.section === 'background').map(backgroundBlock)];
   } else {
-    content = FIELDS.filter((row) => row.section === name).map(simpleField);
+    // The identifier is internal: it is kept and generated, never shown.
+    content = FIELDS.filter((row) => row.section === name && row.type !== 'id').map(simpleField);
   }
   return h('fieldset', { class: 'card' }, legend, content);
 }

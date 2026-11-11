@@ -136,7 +136,7 @@ body.dragging .drop-hint { display: flex; }
 .pv-composition { padding: 4px 12px 0; font-size: 14px; color: var(--c-secondaryText); min-height: 22px; }
 .pv-composition[data-idle="true"] .pv-preedit { opacity: 0.7; }
 .pv-preedit { text-decoration: underline; text-underline-offset: 3px; }
-.pv-strip { display: flex; align-items: stretch; height: var(--bar-height); padding: 0 4px; gap: 2px; }
+.pv-strip { min-width: 0; overflow: hidden; display: flex; align-items: stretch; height: var(--bar-height); padding: 0 4px; gap: 2px; }
 .pv-control { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; color: var(--c-secondaryText); font-size: 20px; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
 span.pv-control { cursor: default; }
 .pv-cells { flex: 1 1 0; min-width: 0; display: flex; gap: var(--cell-gap); align-items: stretch; padding: 4px 0; overflow: hidden; }

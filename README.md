@@ -13,7 +13,7 @@
 - Android：设置 > 键盘外观 > 导入。
 - iPhone：打开松烟 App 的键盘外观页面，点导入。
 
-`fixtures/` 里有每个内置外观和一个改动很多的示例（`sample-lantern`），可以直接导入试试。
+`fixtures/` 里有每个内置外观和一个改动很多的示例（`sample-lantern`），可以直接导入试试。把内置外观的文件导入 Android 版，会得到一份新的副本，内置的那份不会被改动。
 
 ## 运行与测试
 
@@ -45,7 +45,7 @@ A static web editor for Songyan keyboard appearance files (`*.songyanappearance.
 - Android: Settings > Keyboard appearance > Import.
 - iPhone: open the appearance page in the Songyan app and tap Import.
 
-`fixtures/` holds every built-in appearance plus a heavily edited sample (`sample-lantern`) for trying imports.
+`fixtures/` holds every built-in appearance plus a heavily edited sample (`sample-lantern`) for trying imports. Importing a built-in's file into the Android app creates a separate copy; the built-in itself is untouched.
 
 ## Run and test
 
