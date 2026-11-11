@@ -370,12 +370,12 @@ export function renderPreview(host, doc, options) {
   // within 1 px. Browsers without corner-shape draw a plain round corner, which already matches at 1 x.
   set('radius', android || !SQUIRCLE ? m.radius : m.radius * IOS_CORNER_SCALE);
   set('border', m.border);
-  // Android outlines the function keys of a dark, borderless skin in its border colour, 1 dp wide, as
-  // ImePalettes does; letters, marks and the space bar stay unoutlined.
+  // Both apps outline the function keys of a dark, borderless skin in its border colour, 1 pt wide;
+  // letters, marks and the space bar stay unoutlined.
   const opaque = (hex) => hex.length === 7 || hex.slice(7).toUpperCase() === 'FF';
   screen.classList.toggle(
     'pv-fn-outline',
-    android && m.border === 0 && luminance(colors.panel.slice(0, 7)) < 0.2 && opaque(colors.control),
+    m.border === 0 && luminance(colors.panel.slice(0, 7)) < 0.2 && opaque(colors.control),
   );
   set('shadow', m.shadow ? '0 calc(1 * var(--u)) 0 rgba(0, 0, 0, 0.18)' : 'none');
   set('f-letter', m.font.letter);
