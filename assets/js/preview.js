@@ -75,6 +75,8 @@ export const IOS_SURFACE = SYSTEM_SURFACE;
 /** CSS radius per pt of the skin's corner radius for iPhone keys (squircle corners). */
 export const IOS_CORNER_SCALE = 1.75;
 
+const SQUIRCLE = typeof CSS !== 'undefined' && CSS.supports('corner-shape', 'squircle');
+
 /** The default candidate bar. Android treats a value equal to it as "not customised". */
 const DEFAULT_BAR = Object.freeze({ height: 40, cellPaddingX: 7, cellSpacing: 0 });
 const KEY_ROWS = 4;
@@ -321,8 +323,9 @@ export function renderPreview(host, doc, options) {
   set('inset-y', m.capInsetY);
   set('top', m.topPad);
   set('bottom', m.bottomPad);
-  // CSS's squircle corner reads tighter than the system's continuous corner of the same radius; 1.75 x matches the simulator within 1 px.
-  set('radius', android ? m.radius : m.radius * IOS_CORNER_SCALE);
+  // CSS's squircle corner reads tighter than the system's continuous corner of the same radius; 1.75 x matches the simulator
+  // within 1 px. Browsers without corner-shape draw a plain round corner, which already matches at 1 x.
+  set('radius', android || !SQUIRCLE ? m.radius : m.radius * IOS_CORNER_SCALE);
   set('border', m.border);
   set('shadow', m.shadow ? '0 calc(1 * var(--u)) 0 rgba(0, 0, 0, 0.18)' : 'none');
   set('f-letter', m.font.letter);
