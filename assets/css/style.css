@@ -257,8 +257,9 @@ body.dragging .drop-hint { display: flex; }
 .pv-cell[data-selected="true"] { color: var(--c-candSelected); }
 .pv-cell[data-selected="true"]::before { background: var(--c-selected); }
 .pv-toolbar { display: flex; align-items: center; justify-content: space-evenly; box-sizing: content-box; height: calc(var(--bar-h) * var(--u)); padding: calc(var(--bar-pt) * var(--u)) 0 calc(var(--bar-pb) * var(--u)); color: var(--c-candSecondary); }
-[data-platform="iphone"] .pv-toolbar { justify-content: space-around; padding-inline: calc(9 * var(--u)); padding-bottom: calc((var(--bar-pb) + 3.6) * var(--u)); padding-top: calc((var(--bar-pt) - 3.6) * var(--u)); }
-[data-platform="iphone"] .pv-tool .pv-icon { width: calc(19 * var(--u)); height: calc(19 * var(--u)); }
+[data-platform="iphone"] .pv-toolbar { gap: calc(var(--tool-gap) * var(--u)); padding-inline: calc(var(--tool-pad) * var(--u)); padding-bottom: calc((var(--bar-pb) + 3.6) * var(--u)); padding-top: calc((var(--bar-pt) - 3.6) * var(--u)); }
+[data-platform="iphone"] .pv-tool { flex: 1 1 0; }
+[data-platform="iphone"] .pv-tool .pv-icon { width: calc(27 * var(--u)); height: calc(27 * var(--u)); }
 .pv-tool { display: grid; place-items: center; }
 .pv-tool .pv-icon { width: calc(24 * var(--u)); height: calc(24 * var(--u)); }
 .pv-expand { flex: none; display: grid; place-items: center; width: calc(48 * var(--u)); margin: 0; padding: 0; border: 0; background: none; color: var(--c-candSecondary); cursor: pointer; }

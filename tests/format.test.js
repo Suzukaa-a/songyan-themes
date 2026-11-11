@@ -51,11 +51,11 @@ for (const name of files('.songyanappearance.json')) {
 }
 
 test('a standalone skin is wrapped with the system default bar', () => {
-  const { document, kind } = decodeImported(read('skin-builtin-paper.songyanskin.json'));
-  const paper = decodeDocument(read('appearance-builtin-paper.songyanappearance.json'));
+  const { document, kind } = decodeImported(read('skin-builtin-bamboo.songyanskin.json'));
+  const bamboo = decodeDocument(read('appearance-builtin-bamboo.songyanappearance.json'));
   assert.equal(kind, 'skin');
-  assert.deepEqual(document.skin, paper.skin);
-  assert.deepEqual(document.candidateBar, paper.candidateBar);
+  assert.deepEqual(document.skin, bamboo.skin);
+  assert.deepEqual(document.candidateBar, bamboo.candidateBar);
 });
 
 test('a standalone candidate bar is wrapped with the system default skin', () => {
@@ -69,7 +69,7 @@ test('a standalone candidate bar is wrapped with the system default skin', () =>
 });
 
 test('a standalone file with the system default identity gets a fresh one', () => {
-  const skin = JSON.parse(read('skin-builtin-paper.songyanskin.json'));
+  const skin = JSON.parse(read('skin-builtin-bamboo.songyanskin.json'));
   skin.id = 'system-default';
   const { document } = decodeImported(JSON.stringify(skin), () => 'fresh-id');
   assert.equal(document.id, 'fresh-id');
@@ -150,7 +150,6 @@ test('rejects other versions', () => {
   rejects(() => decodeDocument(mutate((d) => { d.formatVersion = '1'; })), ErrorCode.UNSUPPORTED_VERSION, '$.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { delete d.formatVersion; })), ErrorCode.UNSUPPORTED_VERSION, '$.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { d.skin.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.skin.formatVersion');
-  rejects(() => decodeDocument(mutate((d) => { d.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.skin.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { d.candidateBar.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.candidateBar.formatVersion');
 });
 

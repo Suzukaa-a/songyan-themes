@@ -146,9 +146,14 @@ test('version 1 documents do not accept version 2 features', () => {
   rejects(() => decodeDocument(v1((d) => { d.skin.variants.light.background = { type: 'linearGradient', from: '#000000', to: '#111111', direction: 'horizontal' }; })), ErrorCode.INVALID_VALUE, `${BG}.direction`, 'enum');
 });
 
-test('parts of a document share its version', () => {
-  const text = withBackground({ type: 'solid', color: '#000000' }, (d) => { d.candidateBar.formatVersion = 1; });
-  rejects(() => decodeDocument(text), ErrorCode.UNSUPPORTED_VERSION, '$.candidateBar.formatVersion');
+test('a version 2 document may hold version 1 parts; a version 1 document may not hold version 2 parts', () => {
+  const v2 = withBackground({ type: 'solid', color: '#00000080' }, (d) => { d.candidateBar.formatVersion = 1; });
+  // Reading accepts it; writing puts 2 on every part.
+  const written = JSON.parse(encodeDocument(decodeDocument(v2)));
+  assert.deepEqual([written.formatVersion, written.skin.formatVersion, written.candidateBar.formatVersion], [2, 2, 2]);
+  const bad = JSON.parse(read('appearance-builtin-paper.songyanappearance.json'));
+  bad.skin.formatVersion = 2;
+  rejects(() => decodeDocument(JSON.stringify(bad)), ErrorCode.UNSUPPORTED_VERSION, '$.skin.formatVersion');
 });
 
 test('a standalone version 2 skin is wrapped into a version 2 document', () => {
@@ -268,16 +273,21 @@ test('alpha helpers', () => {
   assert.equal(parseHexInput('#11223380'), '#11223380');
 });
 
-test('text stays readable against a translucent key laid over the panel', () => {
+test('text stays readable against a translucent key laid over the system surface', () => {
   const doc = decodeDocument(withBackground({ type: 'solid', color: '#000000' }, (d) => {
-    const light = d.skin.variants.light.colors;
-    light.panel = '#000000';
-    light.key = '#FFFFFF1A'; // nearly clear, so the key looks black
-    light.text = '#1A1A1A';
+    const dark = d.skin.variants.dark.colors;
+    dark.panel = '#FFFFFF'; // the panel does not count: iOS measures over its own surface (#222223 in dark)
+    dark.key = '#FFFFFF1A';
+    dark.text = '#202020';
   }));
-  assert.equal(resolvedColors(doc.skin, 'light').text, '#FFFFFF');
-  doc.skin.variants.light.colors.key = '#FFFFFF';
-  assert.equal(resolvedColors(doc.skin, 'light').text, '#000000');
+  assert.equal(resolvedColors(doc.skin, 'dark').text, '#FFFFFF');
+  doc.skin.variants.dark.colors.key = '#FFFFFF';
+  doc.skin.variants.dark.colors.text = '#202020';
+  assert.equal(resolvedColors(doc.skin, 'dark').text, '#202020');
+  // Translucent text is composited over the key before it is measured.
+  doc.skin.variants.dark.colors.key = '#222223';
+  doc.skin.variants.dark.colors.text = '#FFFFFF10';
+  assert.equal(resolvedColors(doc.skin, 'dark').text, '#FFFFFF');
 });
 
 test('translucent colours survive normalisation and opaque documents are unchanged', () => {

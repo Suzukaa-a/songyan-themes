@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, androidBar } from '../assets/js/preview.js';
+import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, androidBar, iphoneToolbarCentres } from '../assets/js/preview.js';
 import { PRESETS, presetById } from '../assets/js/presets.js';
 import { systemDefaultDocument, normalizeDocument } from '../assets/js/format.js';
 
@@ -86,6 +86,14 @@ test('the iPhone preview matches the real keyboard (402 pt, light, system defaul
   near(r3[8].w, 55.67, 'delete width');
   near(r3[1].x, 4 + 55.67 + 4, 'z position');
   [40, 40, 40, 134, 40, 80].forEach((width, index) => near(r4[index].w, width, `bottom key ${index}`));
+});
+
+test('the iPhone toolbar has three equal buttons, centred as measured in the simulator', () => {
+  const near = (actual, expected) => assert.ok(Math.abs(actual - expected) <= 0.5, `${actual} vs ${expected}`);
+  const [a, b, c] = iphoneToolbarCentres(402);
+  near(a, 73.7); near(b, 201.5); near(c, 328.2);
+  const m = previewMetrics('iphone', normalizeDocument(systemDefaultDocument()));
+  assert.equal(m.bar.height, 40);
 });
 
 test('the candidate bar draws each platform\'s own height and padding', () => {

@@ -473,9 +473,9 @@ export function readDocument(source, path = '$') {
   const head = readRows(source, DOCUMENT_FIELDS, path, false, version);
   const skin = readSkin(source.skin, `${path}.skin`);
   const candidateBar = readCandidateBar(source.candidateBar, `${path}.candidateBar`);
-  // A document carries one version: the skin and the candidate bar must say the same as the document.
-  if (skin.formatVersion !== version) throw new FormatError(ErrorCode.UNSUPPORTED_VERSION, `${path}.skin.formatVersion`);
-  if (candidateBar.formatVersion !== version) throw new FormatError(ErrorCode.UNSUPPORTED_VERSION, `${path}.candidateBar.formatVersion`);
+  // A version 2 document may hold version 1 parts; a version 1 document may not hold a version 2 part.
+  if (skin.formatVersion > version) throw new FormatError(ErrorCode.UNSUPPORTED_VERSION, `${path}.skin.formatVersion`);
+  if (candidateBar.formatVersion > version) throw new FormatError(ErrorCode.UNSUPPORTED_VERSION, `${path}.candidateBar.formatVersion`);
   if (skin.id !== head.id) throw new FormatError(ErrorCode.IDENTITY_MISMATCH, `${path}.skin.id`);
   if (candidateBar.id !== head.id) throw new FormatError(ErrorCode.IDENTITY_MISMATCH, `${path}.candidateBar.id`);
   return { formatVersion: version, ...head, skin, candidateBar };
@@ -528,8 +528,8 @@ export function over(fg, bg) {
   return `#${mixed.map((value) => value.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 }
 
-/** What a translucent panel is measured over when the picture behind it is not known. */
-const BACKDROP = Object.freeze({ light: '#FFFFFF', dark: '#000000' });
+/** The surface the system draws under every iOS keyboard; a translucent key is measured over it. */
+export const SYSTEM_SURFACE = Object.freeze({ light: '#E0E1E8', dark: '#222223' });
 
 /**
  * Reads what a person types into a colour box: `#abc`, `abc`, `#aabbcc`, `aabbcc` or the 8-digit form with
@@ -558,10 +558,9 @@ export function resolvedColors(skin, mode) {
   for (const [role, hex] of Object.entries(skin.variants?.[mode]?.colors ?? {})) {
     if (isHexColorAlpha(hex)) colors[role] = hex;
   }
-  // A translucent key shows the panel through it, so text is measured against the key laid over the panel.
-  const panel = over(colors.panel, BACKDROP[mode]);
+  // A translucent fill is measured over the system keyboard surface; translucent text over the fill.
   for (const [role, on] of Object.entries(CONTRAST_PAIRS)) {
-    colors[role] = contrasting(colors[role], over(colors[on], panel));
+    colors[role] = contrasting(colors[role], over(colors[on], SYSTEM_SURFACE[mode]));
   }
   for (const role of COLOR_NAMES) colors[role] = normalizeHex(colors[role]);
   return colors;

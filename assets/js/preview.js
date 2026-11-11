@@ -11,7 +11,7 @@
 //    the bar's height, padding and spacing only when they differ from the default bar.
 //  - iPhone draws the keys from the skin's own numbers on top of the system keyboard surface.
 
-import { resolvedColors, contrasting } from './format.js';
+import { resolvedColors, contrasting, SYSTEM_SURFACE } from './format.js';
 
 const GRADIENT_ANGLE = { vertical: 'to bottom', horizontal: 'to right', diagonal: 'to bottom right' };
 
@@ -70,7 +70,7 @@ const FONT_STACKS = {
 const WEIGHTS = { regular: 400, medium: 500, semibold: 600 };
 
 /** The surface iOS draws under every keyboard (measured in the simulator); the skin's panel colour and background do not reach it. */
-export const IOS_SURFACE = Object.freeze({ light: '#E0E1E8', dark: '#222223' });
+export const IOS_SURFACE = SYSTEM_SURFACE;
 
 /** The default candidate bar. Android treats a value equal to it as "not customised". */
 const DEFAULT_BAR = Object.freeze({ height: 40, cellPaddingX: 7, cellSpacing: 0 });
@@ -193,6 +193,15 @@ export function previewMetrics(platform, doc) {
   };
 }
 
+/** The iPhone toolbar: three buttons share the width equally between side padding, with a gap (measured on the simulator: centres 73.7 / 201.5 / 328.2 pt on 402 pt). */
+export const IPHONE_TOOLBAR = Object.freeze({ pad: 12.4, gap: 4, count: 3 });
+
+/** Centres (pt) of the iPhone toolbar buttons. */
+export function iphoneToolbarCentres(width, { pad, gap, count } = IPHONE_TOOLBAR) {
+  const each = (width - 2 * pad - (count - 1) * gap) / count;
+  return Array.from({ length: count }, (_, index) => pad + each / 2 + index * (each + gap));
+}
+
 /** Weights of the bottom row on iPhone: 123, 中/英, comma, space, full stop, go. */
 export const IPHONE_BOTTOM_WEIGHTS = [1, 1, 1, 3.35, 1, 2];
 
@@ -240,6 +249,7 @@ const ICONS = {
   clipboard: 'M9.5 3h5a1 1 0 0 1 1 1v1.5h-7V4a1 1 0 0 1 1-1z M8.5 4.5H7A1.5 1.5 0 0 0 5.5 6v13A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V6A1.5 1.5 0 0 0 17 4.5h-1.5',
   keyboard: 'M4 6.5h16a1.5 1.5 0 0 1 1.5 1.500v8a1.5 1.5 0 0 1-1.5 1.500H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.500z M6.5 10h.01 M10 10h.01 M14 10h.01 M17.5 10h.01 M8 14h8',
   edit: 'M4.5 19.500l4-1 10.2-10.200a2 2 0 0 0-2.8-2.800L5.7 15.700z M14.5 7.500l2.8 2.8',
+  hand: 'M8 11V6.2a1.2 1.2 0 0 1 2.4 0V10 M10.4 9.5V4.7a1.2 1.2 0 0 1 2.4 0V10 M12.8 9.6V5.6a1.2 1.2 0 0 1 2.4 0V11 M15.2 8.6a1.2 1.2 0 0 1 2.4 0V14c0 3.6-2.2 6-5.4 6-2.5 0-4-1-5.3-3L4.800 13.200a1.300 1.300 0 0 1 2-1.500L8 13.200',
   oneHand: 'M7 4.500h10A1.5 1.5 0 0 1 18.5 6v12a1.5 1.5 0 0 1-1.5 1.500H7A1.5 1.5 0 0 1 5.5 18V6A1.5 1.5 0 0 1 7 4.500z M9 12h6 M12.5 9.500L15 12l-2.5 2.5',
 };
 
@@ -332,6 +342,8 @@ export function renderPreview(host, doc, options) {
   set('exp-columns', m.expanded.mode === 'list' ? 1 : m.expanded.columns);
   set('keys-h', m.topPad + KEY_ROWS * m.rowHeight + (KEY_ROWS - 1) * m.rowGap + m.bottomPad);
   set('hint-alpha', android ? 1 : 0.6);
+  set('tool-pad', IPHONE_TOOLBAR.pad);
+  set('tool-gap', IPHONE_TOOLBAR.gap);
 
   if (typing && m.bar.reading > 0) {
     const reading = el('div', 'pv-reading');
@@ -369,7 +381,7 @@ function buildToolbar(m, t) {
   // Android spreads its shortcuts over the row; iPhone shows the emoji and settings shortcuts.
   const items = m.platform === 'android'
     ? [['clipboard', 'tbClipboard'], ['keyboard', 'tbKeyboards'], ['emoji', 'tbEmoji'], ['edit', 'tbEdit'], ['oneHand', 'tbOneHand'], ['gear', 'tbSettings']]
-    : [['emoji', 'tbEmoji'], ['gear', 'tbSettings']];
+    : [['emoji', 'tbEmoji'], ['hand', 'tbOneHand'], ['gear', 'tbSettings']];
   for (const [name, label] of items) {
     const item = el('span', 'pv-tool');
     item.append(icon(name));

@@ -34,24 +34,26 @@ stays valid and keeps its meaning. `fixtures/` and `tests/v2.test.js` are the co
 ### Which version a file has
 
 - A writer emits `formatVersion: 2` only when the skin uses a version 2 feature (below). It then writes
-  2 on the document, on the skin and on the candidate bar; the three always agree. Any other file is
-  written as version 1, byte for byte as before, so older apps keep opening it.
-- A reader accepts 1 and 2. In a document the skin and the candidate bar must carry the document's
-  version, otherwise `formatVersion` of the part is rejected. A standalone skin or candidate bar may be
-  version 1 or 2.
+  2 on the document, on the skin and on the candidate bar. Any other file is written as version 1,
+  byte for byte as before, so older apps keep opening it.
+- A reader accepts 1 and 2. A version 2 document may hold version 1 parts (iOS accepts them); a version
+  1 document holding a version 2 part is rejected at that part's `formatVersion`. A standalone skin or
+  candidate bar may be version 1 or 2.
 - The features are version 2 only: a version 1 file that uses one is rejected the way version 1 always
   rejected it (a colour of the wrong shape, an unknown field, an unknown `type`).
-- A writer drops an alpha of `FF` (`#RRGGBBFF` is written `#RRGGBB`) and writes a two-colour vertical
-  gradient with `from` / `to`, so neither makes a file version 2.
+- `#RRGGBBFF` is a valid version 2 colour and makes a file version 2 when written as is (iOS keeps it
+  as written); readers must accept both `#RRGGBB` and `#RRGGBBFF`. The editor drops an `FF` alpha so
+  its files stay version 1. Both apps' writers write a two-colour opaque vertical gradient with
+  `from` / `to`.
 - Decoding stays strict: unknown fields, other versions and out-of-range values are rejected.
 
 ### Colours
 
 Every colour in `colors` and in a background may be `#RRGGBBAA`, alpha `00` (clear) to `FF` (opaque).
-Text roles are still made readable: the contrast rule of version 1 is applied to the text colour against
-the fill it sits on, where a translucent fill is first laid over the panel colour (and a translucent
-panel over white in light variants and black in dark variants, because the picture behind it is not
-known). Both apps and the editor use this rule.
+Text roles are still made readable: the version 1 contrast rule is applied to the text colour against
+the fill it sits on. A translucent fill is measured composited over the system keyboard surface (light
+`#E0E1E8`, dark `#222223`), and translucent text is composited over that fill. The surface is a
+constant, whatever the panel colour or background is. Both apps and the editor use this rule.
 
 ### Background (Android only)
 
