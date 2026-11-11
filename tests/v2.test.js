@@ -46,11 +46,12 @@ function jpeg(width, height) {
 }
 const le = (n, bytes) => Buffer.from(Array.from({ length: bytes }, (_, i) => (n >>> (8 * i)) & 255));
 /** WebP files with a lossy (VP8), lossless (VP8L) or extended (VP8X) header. */
-function webp(width, height, form = 'VP8L') {
+function webp(width, height, form = 'VP8L', total = 0) {
   let payload;
   if (form === 'VP8 ') payload = Buffer.concat([Buffer.from([0x10, 0, 0, 0x9d, 0x01, 0x2a]), le(width, 2), le(height, 2), Buffer.alloc(4)]);
   else if (form === 'VP8L') payload = Buffer.concat([Buffer.from([0x2f]), le((width - 1) | ((height - 1) << 14), 4), Buffer.alloc(4)]);
   else payload = Buffer.concat([Buffer.alloc(4), le(width - 1, 3), le(height - 1, 3)]);
+  if (total) payload = Buffer.concat([payload, Buffer.alloc(total - 20 - payload.length)]);
   const body = Buffer.concat([Buffer.from(form, 'latin1'), le(payload.length, 4), payload]);
   return Buffer.concat([Buffer.from('RIFF', 'latin1'), le(body.length + 4, 4), Buffer.from('WEBP', 'latin1'), body]);
 }
@@ -216,7 +217,7 @@ test('image checks go by magic bytes, not the MIME prefix', () => {
   rejects(() => decodeDocument(withBackground({ type: 'image', image: 5, align: 'center' })), ErrorCode.INVALID_VALUE, `${BG}.image`, 'type');
 });
 
-test('image size limits: 1.5 MiB decoded, 4096 pixels per side', () => {
+test('image size limits: 1 MiB decoded, 4096 pixels per side', () => {
   const pixels = (mime, bytes) => rejects(() => decodeDocument(withBackground(imageBackground(uri(mime, bytes)))), ErrorCode.INVALID_VALUE, `${BG}.image`, 'imagePixels');
   pixels('image/webp', webp(4097, 10));
   pixels('image/webp', webp(10, 4097, 'VP8X'));
@@ -224,7 +225,7 @@ test('image size limits: 1.5 MiB decoded, 4096 pixels per side', () => {
   pixels('image/png', png(4097, 1));
   rejects(() => decodeDocument(withBackground(imageBackground(uri('image/jpeg', jpeg(10, 10))), (d) => { d.skin.variants.light.background.image = d.skin.variants.light.background.image.replace('image/jpeg', 'image/png'); })), ErrorCode.INVALID_VALUE, `${BG}.image`, 'image');
   // Exactly the limit passes the image check; one byte more does not.
-  const pad = (total) => Buffer.concat([webp(8, 8), Buffer.alloc(total - webp(8, 8).length)]);
+  const pad = (total) => webp(8, 8, 'VP8L', total);
   assert.doesNotThrow(() => inspectImage(uri('image/webp', pad(MAX_IMAGE_BYTES))));
   assert.throws(() => inspectImage(uri('image/webp', pad(MAX_IMAGE_BYTES + 1))), (e) => e.reason === 'imageSize');
 });
@@ -241,13 +242,13 @@ test('align is required and one of top, center, bottom', () => {
 
 test('a document with an image may be up to 2 MiB; without one the 256 KiB limit stands', () => {
   // A valid image padded to about 900 KiB, used in both modes: ~2.4 MB of JSON would be over, ~1.9 MB is not.
-  const pad = (bytes) => Buffer.concat([webp(8, 8), Buffer.alloc(bytes - webp(8, 8).length)]);
+  const pad = (bytes) => webp(8, 8, 'VP8L', bytes);
   const document = JSON.parse(withBackground(imageBackground(uri('image/webp', pad(700 * 1024)))));
   document.skin.variants.dark.background = document.skin.variants.light.background;
   const text = encodeDocument(decodeDocument(JSON.stringify(document)));
   assert.ok(text.length > MAX_DOCUMENT_BYTES && text.length < MAX_IMAGE_DOCUMENT_BYTES, String(text.length));
   assert.doesNotThrow(() => decodeDocument(text));
-  const big = JSON.parse(withBackground(imageBackground(uri('image/webp', pad(1100 * 1024)))));
+  const big = JSON.parse(withBackground(imageBackground(uri('image/webp', pad(1024 * 1024)))));
   big.skin.variants.dark.background = big.skin.variants.light.background;
   rejects(() => encodeDocument(decodeDocument(JSON.stringify(big))), ErrorCode.OVERSIZE, '$');
   // No image: a long author pushes a document past 256 KiB and is refused, as in version 1.
@@ -284,4 +285,26 @@ test('translucent colours survive normalisation and opaque documents are unchang
   assert.equal(doc.skin.variants.dark.colors.control, '#55565AAA'.toUpperCase());
   const plain = normalizeDocument(systemDefaultDocument());
   assert.equal(plain.formatVersion, 1);
+});
+
+test('truncated images are rejected', () => {
+  const bad = (mime, bytes) => rejects(() => decodeDocument(withBackground(imageBackground(uri(mime, bytes)))), ErrorCode.INVALID_VALUE, `${BG}.image`, 'image');
+  const p = png(8, 8);
+  bad('image/png', p.subarray(0, p.length - 1));
+  bad('image/png', p.subarray(0, p.length - 20));
+  bad('image/png', Buffer.concat([p, Buffer.from([0])]));
+  const j = jpeg(8, 8);
+  bad('image/jpeg', j.subarray(0, j.length - 1));
+  const w = webp(8, 8, 'VP8L', 40);
+  bad('image/webp', w.subarray(0, w.length - 2));
+  bad('image/webp', Buffer.concat([w, Buffer.from([0, 0])]));
+  assert.doesNotThrow(() => decodeDocument(withBackground(imageBackground(uri('image/webp', w)))));
+});
+
+test('removing the last version 2 feature writes version 1 again', () => {
+  const text = withBackground({ type: 'solid', color: '#000000' }, (d) => { d.skin.variants.light.colors.key = '#FFFFFF80'; });
+  const doc = decodeDocument(text);
+  assert.equal(JSON.parse(encodeDocument(doc)).formatVersion, 2);
+  doc.skin.variants.light.colors.key = '#FFFFFF';
+  assert.equal(JSON.parse(encodeDocument(doc)).formatVersion, 1);
 });

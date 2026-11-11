@@ -171,6 +171,35 @@ body.dragging .drop-hint { display: flex; }
   .color-row .role { grid-column: 1 / -1; min-height: 0; margin-top: 4px; }
 }
 
+/* Background ---------------------------------------------------------------------------------- */
+.bg-mode { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.bg-mode:first-of-type { margin-top: 8px; }
+.bg-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 6px; }
+.bg-head h3 { flex: 1 1 5em; font-size: 14px; font-weight: 600; }
+.bg-head .ctl { flex: none; }
+.link { padding: 0 2px; border: 0; background: none; color: var(--accent); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; border-radius: 4px; }
+.link:hover { text-decoration-thickness: 2px; }
+.btn.icon { width: var(--ctl-h); padding: 0; font-size: 18px; line-height: 1; }
+.btn:disabled { opacity: 0.45; }
+.ctl.stop { display: grid; grid-template-columns: minmax(0, 158px) auto; gap: 8px; }
+.bg-drop { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 96px; padding: 12px; border: 2px dashed var(--line-strong); border-radius: var(--radius); background: var(--field); color: var(--muted); cursor: pointer; text-align: center; }
+.bg-drop svg { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.bg-drop:hover, .bg-drop.over, body.dragging-image .bg-drop { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+.bg-image { display: flex; flex-direction: column; gap: 4px; }
+.crop-wrap { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
+.crop { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line-strong); border-radius: var(--radius-ctl); background: var(--field); touch-action: none; }
+.crop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.crop.movable { cursor: grab; }
+.crop.movable.grabbing { cursor: grabbing; }
+.bg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.bg-info { min-height: 1.5em; }
+.bad { color: var(--danger); }
+.bg-opacity { margin-top: 14px; padding-top: 6px; border-top: 1px solid var(--line); }
+.bg-opacity .field { border-top: 0; }
+.bg-size:empty { display: none; }
+.bg-size { margin-top: 10px; }
+@media (max-width: 520px) { .ctl.stop { grid-template-columns: minmax(0, 1fr) auto; } }
+
 /* Preview column ---------------------------------------------------------------------------- */
 .preview-card { padding: 14px 16px 16px; }
 .title-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; margin-bottom: 10px; }

@@ -15,7 +15,7 @@ export const SYSTEM_DEFAULT_ID = 'system-default';
 export const MAX_DOCUMENT_BYTES = 256 * 1024;
 export const MAX_PART_BYTES = 128 * 1024;
 export const MAX_IMAGE_DOCUMENT_BYTES = 2 * 1024 * 1024;
-export const MAX_IMAGE_BYTES = 1536 * 1024;
+export const MAX_IMAGE_BYTES = 1024 * 1024;
 export const MAX_IMAGE_PIXELS = 4096;
 
 export const COLOR_NAMES = [
@@ -312,6 +312,24 @@ export function sniffImage(b) {
   return null;
 }
 
+/** Whether the file runs to its own end: PNG chunks reach IEND exactly, JPEG ends with EOI, WebP's RIFF size matches. */
+export function isComplete(kind, b) {
+  if (kind === 'png') {
+    let i = 8;
+    while (i + 12 <= b.length) {
+      const length = u32be(b, i);
+      const end = i + 12 + length;
+      if (end > b.length) return false;
+      if (ascii(b, i + 4, 4) === 'IEND') return end === b.length;
+      i = end;
+    }
+    return false;
+  }
+  if (kind === 'jpeg') return b.length >= 4 && b[b.length - 2] === 0xff && b[b.length - 1] === 0xd9;
+  if (kind === 'webp') return b.length >= 12 && ((b[4] | (b[5] << 8) | (b[6] << 16) | (b[7] << 24)) >>> 0) + 8 === b.length;
+  return false;
+}
+
 /** Pixel size read from the file header, or null when the header is truncated or malformed. */
 export function imageSize(kind, b) {
   if (kind === 'png') {
@@ -355,7 +373,7 @@ export function imageSize(kind, b) {
 /**
  * Checks a background image data URI and returns `{ kind, mime, bytes, width, height }`. Throws INVALID_VALUE
  * with reason `image` (not a data URI of a supported type, bad base64, magic bytes disagree with the declared
- * type, header unreadable), `imageSize` (decoded bytes over 1.5 MiB) or `imagePixels` (a side over 4096).
+ * type, header unreadable), `imageSize` (decoded bytes over 1 MiB) or `imagePixels` (a side over 4096).
  */
 export function inspectImage(uri, path = '$') {
   const prefix = DATA_PREFIX.exec(uri);
@@ -373,6 +391,7 @@ export function inspectImage(uri, path = '$') {
   }
   const kind = sniffImage(bytes);
   if (kind === null || kind !== prefix[1]) throw invalid(path, 'image');
+  if (!isComplete(kind, bytes)) throw invalid(path, 'image');
   const size = imageSize(kind, bytes);
   if (!size || size.width < 1 || size.height < 1) throw invalid(path, 'image');
   if (size.width > MAX_IMAGE_PIXELS || size.height > MAX_IMAGE_PIXELS) throw invalid(path, 'imagePixels');

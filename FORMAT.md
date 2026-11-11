@@ -71,8 +71,10 @@ known). Both apps and the editor use this rule.
 - `image` is a `data:` URI of the form `data:image/<webp|jpeg|png>;base64,<canonical base64>`. The
   decoded bytes must start with the magic bytes of the type named in the URI (PNG `89 50 4E 47 0D 0A
   1A 0A`, JPEG `FF D8 FF`, WebP `RIFF`, 4 bytes, `WEBP`); the MIME prefix alone is not trusted. The
-  decoded size is at most 1.5 MiB (1572864 bytes) and width and height, read from the file header,
-  are each at most 4096 pixels. `align` is required.
+  decoded size is at most 1 MiB (1048576 bytes) and width and height, read from the file header,
+  are each at most 4096 pixels. The file must be complete: a PNG runs through its `IEND` chunk to the
+  last byte, a JPEG ends with the end-of-image marker `FF D9`, and the size in a WebP's `RIFF` header
+  matches the data; a truncated image is rejected. `align` is required.
 - The image covers the keyboard area: it is scaled evenly until it fills the area (by width when the
   image is at least as tall as the area), centred horizontally, and cropped vertically as `align` says:
   `top` keeps the top edge, `bottom` the bottom edge, `center` the middle. Blur, dimming and
