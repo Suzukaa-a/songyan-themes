@@ -1,0 +1,95 @@
+{
+  "appearance" : "system",
+  "author" : "松烟",
+  "candidateBar" : {
+    "collapsed" : {
+      "cellPaddingX" : 16,
+      "cellSpacing" : 6,
+      "fillsAvailableWidth" : true,
+      "height" : 52
+    },
+    "compositionRow" : {
+      "visible" : "composingWithIdleRaw"
+    },
+    "controls" : {
+      "pagePosition" : "leading",
+      "showsExpand" : true
+    },
+    "expanded" : {
+      "columnSpacing" : 6,
+      "columns" : 3,
+      "fullRowTextLength" : 12,
+      "mode" : "list",
+      "rowSpacing" : 6
+    },
+    "formatVersion" : 1,
+    "id" : "sample-lantern",
+    "name" : "示例·灯火"
+  },
+  "formatVersion" : 1,
+  "id" : "sample-lantern",
+  "name" : "示例·灯火",
+  "skin" : {
+    "formatVersion" : 1,
+    "id" : "sample-lantern",
+    "keycap" : {
+      "borderWidth" : 1.5,
+      "cornerRadius" : 14,
+      "shadow" : "subtle"
+    },
+    "name" : "示例·灯火",
+    "spacing" : {
+      "visualInsetX" : 3,
+      "visualInsetY" : 4
+    },
+    "typography" : {
+      "candidateSize" : 26,
+      "family" : "serif",
+      "keySize" : 26,
+      "secondarySize" : 13,
+      "weight" : "semibold"
+    },
+    "variants" : {
+      "dark" : {
+        "background" : {
+          "direction" : "vertical",
+          "from" : "#2B1B14",
+          "to" : "#120B08",
+          "type" : "linearGradient"
+        },
+        "colors" : {
+          "accent" : "#E0A33A",
+          "accentText" : "#2A1500",
+          "border" : "#7A5A3A",
+          "control" : "#2A1D17",
+          "key" : "#3B2A22",
+          "panel" : "#1E1410",
+          "pressed" : "#58402F",
+          "secondaryText" : "#C9A57C",
+          "selected" : "#6B3F1F",
+          "text" : "#F7E6CC"
+        }
+      },
+      "light" : {
+        "background" : {
+          "direction" : "vertical",
+          "from" : "#FBEFD5",
+          "to" : "#EBCB93",
+          "type" : "linearGradient"
+        },
+        "colors" : {
+          "accent" : "#8B1E2D",
+          "accentText" : "#FFF4E0",
+          "border" : "#B98A4A",
+          "control" : "#E8C98F",
+          "key" : "#FFF8E8",
+          "panel" : "#F6E7C8",
+          "pressed" : "#E0A95B",
+          "secondaryText" : "#7A4B2A",
+          "selected" : "#F2C879",
+          "text" : "#3A1F10"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>松烟键盘外观编辑器</title>
+  <meta name="description" content="编辑松烟键盘外观文件，实时预览，导出后导入松烟。">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script type="module" src="assets/js/app.js"></script>
+</head>
+<body>
+  <header class="page-header">
+    <h1 id="title" data-i18n="title">松烟键盘外观编辑器</h1>
+    <div class="lang" role="group" aria-label="语言 / Language">
+      <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false">English</button>
+    </div>
+  </header>
+  <p class="intro" data-i18n="intro"></p>
+
+  <main class="layout">
+    <section class="edit-col" aria-labelledby="edit-heading">
+      <h2 id="edit-heading" class="visually-hidden" data-i18n="editing"></h2>
+      <div class="card" id="start-card">
+        <div class="start">
+          <label for="preset" data-i18n="startFrom"></label>
+          <select id="preset"></select>
+          <button type="button" class="btn" id="start-btn" data-i18n="start"></button>
+        </div>
+        <p class="note" data-i18n="startFromHint"></p>
+        <div class="btn-row">
+          <button type="button" class="btn" id="import-btn" data-i18n="importFile"></button>
+          <input type="file" id="file" accept=".json,application/json" class="visually-hidden" tabindex="-1">
+        </div>
+        <details id="paste">
+          <summary data-i18n="pasteJson"></summary>
+          <label for="paste-text" class="visually-hidden" data-i18n="pasteLabel"></label>
+          <textarea id="paste-text" spellcheck="false"></textarea>
+          <button type="button" class="btn" id="paste-btn" data-i18n="pasteImport"></button>
+        </details>
+        <div class="messages" id="messages" role="status" aria-live="polite"></div>
+        <p class="note" data-i18n="autosaveNote"></p>
+      </div>
+      <form id="form" onsubmit="return false"></form>
+    </section>
+
+    <aside class="preview-col" aria-labelledby="preview-heading">
+      <div class="card">
+        <div class="title-line">
+          <h2 id="preview-heading" data-i18n="preview"></h2>
+          <span class="note"><span data-i18n="editing"></span>：<strong id="doc-name"></strong></span>
+        </div>
+        <div class="toggles">
+          <div class="seg" role="group" id="mode-seg" aria-label="浅色 / 深色">
+            <button type="button" data-mode="light" aria-pressed="true" data-i18n="previewLight"></button>
+            <button type="button" data-mode="dark" aria-pressed="false" data-i18n="previewDark"></button>
+          </div>
+          <div class="seg" role="group" id="platform-seg" aria-label="Android / iPhone">
+            <button type="button" data-platform="android" aria-pressed="true" data-i18n="previewAndroid"></button>
+            <button type="button" data-platform="iphone" aria-pressed="false" data-i18n="previewIphone"></button>
+          </div>
+        </div>
+        <div class="preview-host" id="preview"></div>
+        <p class="note preview-note" data-i18n="previewHint"></p>
+        <p class="note" id="iphone-note" data-i18n="iphoneNote" hidden></p>
+        <div class="btn-row export-row">
+          <button type="button" class="btn primary" id="download-btn" data-i18n="download"></button>
+          <button type="button" class="btn" id="copy-btn" data-i18n="copy"></button>
+          <button type="button" class="btn" id="share-btn" data-i18n="share" hidden></button>
+        </div>
+        <div class="messages" id="export-messages" role="status" aria-live="polite"></div>
+      </div>
+    </aside>
+  </main>
+  <noscript><p class="intro">需要 JavaScript 才能使用编辑器。 / This editor needs JavaScript.</p></noscript>
+  <script>
+    // Some browsers refuse ES modules on file://. Say so instead of showing a dead page.
+    setTimeout(function () {
+      if (window.__songyanReady) return;
+      var note = document.createElement('p');
+      note.className = 'intro';
+      note.textContent = '页面没能启动。如果你是直接双击打开的文件，请换成 Firefox，或在这个文件夹里运行 python3 -m http.server 再访问 localhost:8000。 / The page did not start. If you opened it from disk, use Firefox, or run python3 -m http.server here and open localhost:8000.';
+      document.querySelector('.layout').before(note);
+    }, 1500);
+  </script>
+  <div class="drop-hint" id="drop-hint" data-i18n="dropHint"></div>
+</body>
+</html>
