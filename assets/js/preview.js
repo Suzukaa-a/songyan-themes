@@ -72,6 +72,9 @@ const WEIGHTS = { regular: 400, medium: 500, semibold: 600 };
 /** The surface iOS draws under every keyboard (measured in the simulator); the skin's panel colour and background do not reach it. */
 export const IOS_SURFACE = SYSTEM_SURFACE;
 
+/** CSS radius per pt of the skin's corner radius for iPhone keys (squircle corners). */
+export const IOS_CORNER_SCALE = 1.75;
+
 /** The default candidate bar. Android treats a value equal to it as "not customised". */
 const DEFAULT_BAR = Object.freeze({ height: 40, cellPaddingX: 7, cellSpacing: 0 });
 const KEY_ROWS = 4;
@@ -253,9 +256,12 @@ const ICONS = {
   oneHand: 'M7 4.500h10A1.5 1.5 0 0 1 18.5 6v12a1.5 1.5 0 0 1-1.5 1.500H7A1.5 1.5 0 0 1 5.5 18V6A1.5 1.5 0 0 1 7 4.500z M9 12h6 M12.5 9.500L15 12l-2.5 2.5',
 };
 
+/** A glyph whose ink is not centred in its 24 x 24 box gets its own view box so it lands where the real symbol does. */
+const VIEW_BOXES = { hand: '-1.33 -0.25 24 24' };
+
 function icon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('viewBox', VIEW_BOXES[name] ?? '0 0 24 24');
   svg.setAttribute('class', 'pv-icon');
   svg.setAttribute('aria-hidden', 'true');
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -315,7 +321,8 @@ export function renderPreview(host, doc, options) {
   set('inset-y', m.capInsetY);
   set('top', m.topPad);
   set('bottom', m.bottomPad);
-  set('radius', m.radius);
+  // CSS's squircle corner reads tighter than the system's continuous corner of the same radius; 1.75 x matches the simulator within 1 px.
+  set('radius', android ? m.radius : m.radius * IOS_CORNER_SCALE);
   set('border', m.border);
   set('shadow', m.shadow ? '0 calc(1 * var(--u)) 0 rgba(0, 0, 0, 0.18)' : 'none');
   set('f-letter', m.font.letter);
