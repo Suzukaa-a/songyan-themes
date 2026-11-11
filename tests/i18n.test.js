@@ -35,13 +35,14 @@ test('interface text avoids internal terms', () => {
 
 test('Chinese text uses full-width punctuation', () => {
   for (const [key, text] of Object.entries(STRINGS.zh)) {
-    const plain = text.replace(/\{\w+\}/g, '').replace(/JSON|Android|iPhone|iOS|GPL-3\.0|#RRGGBB|#2A593F|ni hao|nǐ hǎo/g, '');
+    const plain = text.replace(/\{\w+\}/g, '').replace(/JSON|Android|iPhone|iOS|GPL-3\.0|#RRGGBBAA|#RRGGBB|#2A593F|ni hao|nǐ hǎo|HEIC|JPEG|PNG|WebP|MB/g, '');
     assert.ok(!/[一-鿿][,.;:!?]|[,.;:!?]$/.test(plain), `${key}: ${text}`);
   }
 });
 
 test('error paths of fields that are not shown fall back to a readable name', () => {
-  assert.equal(fieldLabel('zh', '$.skin.variants.light.background'), '键盘外观');
+  assert.equal(fieldLabel('zh', '$.skin.variants.light.background'), '背景（浅色）');
+  assert.equal(fieldLabel('zh', '$.skin.variants.dark.background.image'), '背景（深色）');
   assert.equal(fieldLabel('zh', '$.skin.typography.keySize'), '键盘外观');
   assert.equal(fieldLabel('zh', '$.candidateBar.controls.pagePosition'), '候选栏');
   assert.equal(translator('en')('f.keycap.borderWidth'), 'Border width');

@@ -84,3 +84,19 @@ test('the strip height rule matches the apps', () => {
   assert.equal(effectiveBarHeight(36, 30), 41);
   assert.equal(effectiveBarHeight(80, 16), 56);
 });
+
+test('background CSS: solid, gradients of every direction, images by align', async () => {
+  const { backgroundCss } = await import('../assets/js/preview.js');
+  assert.equal(backgroundCss(undefined), null);
+  assert.equal(backgroundCss({ type: 'solid', color: '#11223380' }), 'linear-gradient(#11223380, #11223380)');
+  assert.equal(
+    backgroundCss({ type: 'linearGradient', from: '#000000', to: '#FFFFFF', direction: 'vertical' }),
+    'linear-gradient(to bottom, #000000, #FFFFFF)');
+  assert.equal(
+    backgroundCss({ type: 'linearGradient', colors: ['#000000', '#777777', '#FFFFFF'], direction: 'horizontal' }),
+    'linear-gradient(to right, #000000, #777777, #FFFFFF)');
+  assert.match(backgroundCss({ type: 'linearGradient', colors: ['#000000', '#FFFFFF'], direction: 'diagonal' }), /to bottom right/);
+  const image = { type: 'image', image: 'data:image/png;base64,AAAA', align: 'bottom' };
+  assert.equal(backgroundCss(image, () => 'blob:x'), 'url("blob:x") center bottom / cover no-repeat');
+  assert.equal(backgroundCss(image, () => null), null);
+});

@@ -13,6 +13,53 @@
 
 import { resolvedColors, contrasting } from './format.js';
 
+const GRADIENT_ANGLE = { vertical: 'to bottom', horizontal: 'to right', diagonal: 'to bottom right' };
+
+/** Blob URLs for background images, so a big data URI is not parsed again on every redraw. */
+const urlCache = new Map();
+function imageUrl(dataUri) {
+  if (urlCache.has(dataUri)) {
+    const url = urlCache.get(dataUri);
+    urlCache.delete(dataUri);
+    urlCache.set(dataUri, url);
+    return url;
+  }
+  let url;
+  try {
+    const comma = dataUri.indexOf(',');
+    const binary = atob(dataUri.slice(comma + 1));
+    const mime = /^data:([^;]+);/.exec(dataUri)?.[1] ?? 'image/png';
+    url = URL.createObjectURL(new Blob([Uint8Array.from(binary, (char) => char.charCodeAt(0))], { type: mime }));
+  } catch {
+    return null;
+  }
+  urlCache.set(dataUri, url);
+  while (urlCache.size > 4) {
+    const [oldest, oldUrl] = urlCache.entries().next().value;
+    urlCache.delete(oldest);
+    URL.revokeObjectURL(oldUrl);
+  }
+  return url;
+}
+
+/**
+ * The CSS background of the Android keyboard: the panel colour, with the skin's background drawn over it. Returns
+ * null for none. The image is scaled to cover and centred across, placed up or down by `align`, as in the app.
+ */
+export function backgroundCss(background, urlFor = imageUrl) {
+  if (!background) return null;
+  if (background.type === 'solid') return `linear-gradient(${background.color}, ${background.color})`;
+  if (background.type === 'linearGradient') {
+    const stops = background.colors ?? [background.from, background.to];
+    return `linear-gradient(${GRADIENT_ANGLE[background.direction]}, ${stops.join(', ')})`;
+  }
+  if (background.type === 'image') {
+    const url = urlFor(background.image);
+    return url ? `url("${url}") center ${background.align} / cover no-repeat` : null;
+  }
+  return null;
+}
+
 const SYSTEM_FONT = 'system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif';
 const FONT_STACKS = {
   system: SYSTEM_FONT,
@@ -197,8 +244,10 @@ export function renderPreview(host, doc, options) {
   set('c-candSelected', contrasting(colors.text, colors.selected));
   set('font', FONT_STACKS[m.family]);
   set('weight', WEIGHTS[m.weight]);
-  // Android paints the panel colour; the skin's background field is not painted by either app.
+  // Android paints the panel colour and the skin's background over it; iPhone's surface belongs to the system.
   set('surface', android ? colors.panel : IOS_SURFACE[mode]);
+  const background = android ? backgroundCss(doc.skin.variants?.[mode]?.background) : null;
+  keyboard.style.background = background ? `${background}, ${colors.panel}` : '';
   set('side', m.sidePad);
   set('gx', m.gapX);
   set('row-h', m.rowHeight);

@@ -589,6 +589,18 @@ export function stampVersion(document) {
   return document;
 }
 
+/** A gradient in the oldest shape that can say it: `from`/`to` for two opaque vertical stops, else `colors`. */
+export function makeGradient(colors, direction) {
+  const stops = colors.map(plain);
+  if (stops.length === 2 && direction === 'vertical' && stops.every(isHexColor)) {
+    return { type: 'linearGradient', from: stops[0], to: stops[1], direction };
+  }
+  return { type: 'linearGradient', colors: stops, direction };
+}
+
+/** The stops of a gradient background, whichever shape it has. */
+export const gradientStops = (background) => background.colors ?? [background.from, background.to];
+
 /** Whether the skin holds a background image, which raises the size limit and rules out sharing by link. */
 export const hasImage = (document) => MODES.some((mode) => document.skin?.variants?.[mode]?.background?.type === 'image');
 
