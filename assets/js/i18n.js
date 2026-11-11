@@ -121,8 +121,11 @@ const zh = {
   errNotObject: '文件内容不对，应该是一组设置。',
   errOversize: '文件太大了，导入不了。',
   errUnknown: '文件里有不认识的项目「{field}」。',
-  errVersion: '这个文件的版本不受支持，只能用第 1 版。',
-  errColor: '{field}的颜色格式不对，要写成 #RRGGBB。',
+  errVersion: '这个文件的版本不受支持，只能用第 1 版或第 2 版。',
+  errColor: '{field}的颜色格式不对，要写成 #RRGGBB，带透明度时写成 #RRGGBBAA。',
+  errImage: '{field}不是可用的图片，只支持 WebP、JPEG 和 PNG。',
+  errImageSize: '{field}的图片超过了 1.5 MB。',
+  errImagePixels: '{field}的图片太大，宽和高都不能超过 4096 像素。',
   errRange: '{field}超出了范围。',
   errEnum: '{field}的取值不对。',
   errType: '{field}的格式不对。',
@@ -254,8 +257,11 @@ const en = {
   errNotObject: 'The file should hold one group of settings.',
   errOversize: 'The file is too large to import.',
   errUnknown: 'The file has an item that is not recognised: “{field}”.',
-  errVersion: 'This file version is not supported. Only version 1 works.',
-  errColor: '{field}: the colour must look like #RRGGBB.',
+  errVersion: 'This file version is not supported. Only versions 1 and 2 work.',
+  errColor: '{field}: the colour must look like #RRGGBB, or #RRGGBBAA with transparency.',
+  errImage: '{field} is not a usable image. Only WebP, JPEG and PNG work.',
+  errImageSize: 'The image in {field} is over 1.5 MB.',
+  errImagePixels: 'The image in {field} is too large. Width and height must each be 4096 pixels or less.',
   errRange: '{field} is out of range.',
   errEnum: '{field} has a value that is not allowed.',
   errType: '{field} has the wrong format.',
@@ -299,7 +305,7 @@ export function describeError(lang, error) {
   const field = fieldLabel(lang, path);
   const byReason = {
     color: 'errColor', range: 'errRange', enum: 'errEnum', type: 'errType', id: 'errId', name: 'errName',
-    object: 'errObject', background: 'errBackground',
+    object: 'errObject', background: 'errBackground', image: 'errImage', imageSize: 'errImageSize', imagePixels: 'errImagePixels',
   };
   const message = {
     MALFORMED_JSON: () => t('errMalformed'),

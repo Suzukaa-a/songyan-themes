@@ -146,10 +146,11 @@ test('rejects unknown fields at every level', () => {
 });
 
 test('rejects other versions', () => {
-  rejects(() => decodeDocument(mutate((d) => { d.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.formatVersion');
+  rejects(() => decodeDocument(mutate((d) => { d.formatVersion = 3; })), ErrorCode.UNSUPPORTED_VERSION, '$.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { d.formatVersion = '1'; })), ErrorCode.UNSUPPORTED_VERSION, '$.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { delete d.formatVersion; })), ErrorCode.UNSUPPORTED_VERSION, '$.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { d.skin.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.skin.formatVersion');
+  rejects(() => decodeDocument(mutate((d) => { d.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.skin.formatVersion');
   rejects(() => decodeDocument(mutate((d) => { d.candidateBar.formatVersion = 2; })), ErrorCode.UNSUPPORTED_VERSION, '$.candidateBar.formatVersion');
 });
 
@@ -251,7 +252,9 @@ test('parseHexInput accepts the shapes people type and returns #RRGGBB', async (
   assert.equal(parseHexInput('abc'), '#AABBCC');
   assert.equal(parseHexInput('#aabbcc'), '#AABBCC');
   assert.equal(parseHexInput('  1a2B3c '), '#1A2B3C');
-  for (const bad of ['', '#', '#ab', '#abcd', '#abcde', '#abcdefg', 'xyz', '##abc', '#aabbccdd']) {
+  assert.equal(parseHexInput('#aabbcc80'), '#AABBCC80');
+  assert.equal(parseHexInput('#aabbccFF'), '#AABBCC');
+  for (const bad of ['', '#', '#ab', '#abcd', '#abcde', '#abcdefg', 'xyz', '##abc', '#aabbccd', '#aabbccddee']) {
     assert.equal(parseHexInput(bad), null, bad);
   }
 });
