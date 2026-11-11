@@ -11,7 +11,7 @@
 //    the bar's height, padding and spacing only when they differ from the default bar.
 //  - iPhone draws the keys from the skin's own numbers on top of the system keyboard surface.
 
-import { resolvedColors, contrasting, SYSTEM_SURFACE } from './format.js';
+import { resolvedColors, contrasting, luminance, SYSTEM_SURFACE } from './format.js';
 
 const GRADIENT_ANGLE = { vertical: 'to bottom', horizontal: 'to right', diagonal: 'to bottom right' };
 
@@ -150,7 +150,8 @@ export function previewMetrics(platform, doc) {
         padBottom: 0,
       },
       expanded: { ...expanded, fullRowLength: 8 },
-      showsGlobe: true,
+      // Gesture navigation shows the system's own keyboard switcher, so the footer has no globe key.
+      showsGlobe: false,
       systemRow: 24,
     };
   }
@@ -258,6 +259,28 @@ const ICONS = {
   oneHand: 'M7 4.500h10A1.5 1.5 0 0 1 18.5 6v12a1.5 1.5 0 0 1-1.5 1.500H7A1.5 1.5 0 0 1 5.5 18V6A1.5 1.5 0 0 1 7 4.500z M9 12h6 M12.5 9.500L15 12l-2.5 2.5',
 };
 
+/** Android's own toolbar drawables (ime/src/main/res/drawable/ic_toolbar_*.xml, ic_qs_one_hand_off.xml): filled 24 x 24 Material glyphs. */
+const ANDROID_ICONS = {
+  clipboard: 'M19,2h-4.18C14.4,0.84 13.3,0 12,0c-1.3,0 -2.4,0.84 -2.82,2L5,2c-1.1,0 -2,0.9 -2,2v16c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2L21,4c0,-1.1 -0.9,-2 -2,-2zM12,2c0.55,0 1,0.45 1,1s-0.45,1 -1,1 -1,-0.45 -1,-1 0.45,-1 1,-1zM19,20L5,20L5,4h2v3h10L17,4h2v16z',
+  keyboard: 'M20,5L4,5c-1.1,0 -1.99,0.9 -1.99,2L2,17c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2L22,7c0,-1.1 -0.9,-2 -2,-2zM11,8h2v2h-2L11,8zM11,11h2v2h-2v-2zM8,8h2v2L8,10L8,8zM8,11h2v2L8,13v-2zM7,13L5,13v-2h2v2zM7,10L5,10L5,8h2v2zM16,17L8,17v-2h8v2zM16,13h-2v-2h2v2zM16,10h-2L14,8h2v2zM19,13h-2v-2h2v2zM19,10h-2L17,8h2v2z',
+  emoji: 'M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8zM15.5,11c0.83,0 1.5,-0.67 1.5,-1.5S16.33,8 15.5,8 14,8.67 14,9.5s0.67,1.5 1.5,1.5zM8.5,11c0.83,0 1.5,-0.67 1.5,-1.5S9.33,8 8.5,8 7,8.67 7,9.5 7.67,11 8.5,11zM12,17.5c2.33,0 4.31,-1.46 5.11,-3.5H6.89c0.8,2.04 2.78,3.5 5.11,3.5z',
+  edit: 'M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z',
+  oneHand: 'M7,2h10c1.1,0 2,0.9 2,2v16c0,1.1 -0.9,2 -2,2H7c-1.1,0 -2,-0.9 -2,-2V4c0,-1.1 0.9,-2 2,-2zM7,4v16h10V4H7z M8,12h8v7H8z',
+  gear: 'M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z',
+  hide: 'M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6 1.41,-1.41z',
+};
+
+function androidIcon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', 'pv-icon pv-filled');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', ANDROID_ICONS[name]);
+  svg.append(path);
+  return svg;
+}
+
 /** A glyph whose ink is not centred in its 24 x 24 box gets its own view box so it lands where the real symbol does. */
 const VIEW_BOXES = { hand: '-1.33 -0.25 24 24' };
 
@@ -327,6 +350,13 @@ export function renderPreview(host, doc, options) {
   // within 1 px. Browsers without corner-shape draw a plain round corner, which already matches at 1 x.
   set('radius', android || !SQUIRCLE ? m.radius : m.radius * IOS_CORNER_SCALE);
   set('border', m.border);
+  // Android outlines the function keys of a dark, borderless skin in its border colour, 1 dp wide, as
+  // ImePalettes does; letters, marks and the space bar stay unoutlined.
+  const opaque = (hex) => hex.length === 7 || hex.slice(7).toUpperCase() === 'FF';
+  screen.classList.toggle(
+    'pv-fn-outline',
+    android && m.border === 0 && luminance(colors.panel.slice(0, 7)) < 0.2 && opaque(colors.control),
+  );
   set('shadow', m.shadow ? '0 calc(1 * var(--u)) 0 rgba(0, 0, 0, 0.18)' : 'none');
   set('f-letter', m.font.letter);
   set('f-hint', m.font.hint);
@@ -388,13 +418,15 @@ function buildStrip(t, expanded, onToggleExpand) {
 
 function buildToolbar(m, t) {
   const bar = el('div', 'pv-toolbar');
-  // Android spreads its shortcuts over the row; iPhone shows the emoji and settings shortcuts.
-  const items = m.platform === 'android'
-    ? [['clipboard', 'tbClipboard'], ['keyboard', 'tbKeyboards'], ['emoji', 'tbEmoji'], ['edit', 'tbEdit'], ['oneHand', 'tbOneHand'], ['gear', 'tbSettings']]
+  // Android splits the row into equal slots for its default shortcuts plus the collapse button (ToolbarView);
+  // iPhone shows emoji, one-handed mode and settings.
+  const android = m.platform === 'android';
+  const items = android
+    ? [['clipboard', 'tbClipboard'], ['keyboard', 'tbKeyboards'], ['emoji', 'tbEmoji'], ['edit', 'tbEdit'], ['oneHand', 'tbOneHand'], ['gear', 'tbSettings'], ['hide', 'tbHide']]
     : [['emoji', 'tbEmoji'], ['hand', 'tbOneHand'], ['gear', 'tbSettings']];
   for (const [name, label] of items) {
     const item = el('span', 'pv-tool');
-    item.append(icon(name));
+    item.append(android ? androidIcon(name) : icon(name));
     item.setAttribute('role', 'img');
     item.setAttribute('aria-label', t(label));
     bar.append(item);
@@ -469,12 +501,15 @@ function buildKeys(m, t) {
     keys.append(bottom);
     return keys;
   }
+  // Android's letters footer (KeyboardPages.lettersFooter): [globe] 123 | 中/英 | ，| space | 。| return. The globe
+  // takes its share from the space bar; return is widened by one mark so the space bar stays centred.
+  if (m.showsGlobe) bottom.append(key(icon('globe'), 'control', 1));
   bottom.append(key(el('span', 'pv-label pv-control-text', t('numbersKey')), 'control', 1.4));
   bottom.append(key(el('span', 'pv-label pv-control-text', t('languageKey')), 'control', 1.2));
-  if (m.showsGlobe) bottom.append(key(icon('globe'), 'control', 1));
-  bottom.append(key(el('span', 'pv-label pv-space-text', t('space')), 'space', 4.8));
-  bottom.append(key(el('span', 'pv-label', '，'), 'control', 1));
-  bottom.append(key(el('span', 'pv-label pv-enter-text', t('enter')), 'accent', 1.6));
+  bottom.append(key(el('span', 'pv-label', '，'), 'letter', 1));
+  bottom.append(key(el('span', 'pv-label pv-space-text', t('space')), 'space', m.showsGlobe ? 3.8 : 4.8));
+  bottom.append(key(el('span', 'pv-label', '。'), 'letter', 1));
+  bottom.append(key(el('span', 'pv-label pv-enter-text', t('enter')), 'accent', 2.6));
   keys.append(bottom);
   return keys;
 }

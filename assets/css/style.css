@@ -261,6 +261,8 @@ body.dragging .drop-hint { display: flex; }
 [data-platform="iphone"] .pv-tool { flex: 1 1 0; }
 [data-platform="iphone"] .pv-tool .pv-icon { width: calc(27 * var(--u)); height: calc(27 * var(--u)); }
 .pv-tool { display: grid; place-items: center; }
+[data-platform="android"] .pv-tool { flex: 1 1 0; }
+.pv-icon.pv-filled { fill: currentColor; stroke: none; }
 .pv-tool .pv-icon { width: calc(24 * var(--u)); height: calc(24 * var(--u)); }
 .pv-expand { flex: none; display: grid; place-items: center; width: calc(48 * var(--u)); margin: 0; padding: 0; border: 0; background: none; color: var(--c-candSecondary); cursor: pointer; }
 [data-platform="iphone"] .pv-expand { width: calc(40 * var(--u)); height: calc(30 * var(--u)); align-self: center; margin: 0 calc(6 * var(--u)); border-radius: calc(8 * var(--u)); background: var(--c-control); color: var(--c-text); }
@@ -277,6 +279,7 @@ body.dragging .drop-hint { display: flex; }
 .pv-outlying .pv-key.side { flex: 1 1 0; }
 .pv-key { flex: 1 1 0; min-width: 0; margin: 0; padding: calc(var(--inset-y) * var(--u)) calc(var(--inset-x) * var(--u)); border: 0; background: none; color: inherit; font: inherit; cursor: pointer; touch-action: manipulation; }
 .pv-face { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; border: calc(var(--border) * var(--u)) solid var(--c-border); border-radius: calc(var(--radius) * var(--u)); background: var(--c-key); color: var(--c-text); box-shadow: var(--shadow); }
+.pv-fn-outline .pv-key.control .pv-face, .pv-fn-outline .pv-key.accent .pv-face { border: calc(1 * var(--u)) solid var(--c-border); }
 .pv-label { font-size: calc(var(--f-letter) * var(--u)); line-height: 1; }
 .pv-control-text { font-size: calc(var(--f-control) * var(--u)); }
 .pv-space-text { font-size: calc(var(--f-space) * var(--u)); }
