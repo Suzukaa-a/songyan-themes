@@ -6,7 +6,7 @@
 
 1. 打开页面，从一个内置外观开始，或者导入已有的文件（选择文件、拖进页面、粘贴 JSON 都行）。
 2. 改完后点「下载文件」。手机上也可以点「分享」，或者「复制 JSON」。
-3. 预览里可以切换浅色 / 深色、Android / iPhone，以及输入中 / 工具栏。编辑器只提供 Android 和 iPhone 都会读取的设置：颜色、按键边框和候选栏。文件里的其他项目会原样保留。iPhone 上键盘底色由系统绘制，所以键盘底色和背景只对 Android 有效。用到透明度、多色渐变或图片的文件是第 2 版，其余仍是第 1 版。图片会在浏览器里裁剪、模糊、压暗并压缩，不会上传。
+3. 预览里可以切换浅色 / 深色、Android / iPhone，以及输入中 / 工具栏。编辑器只提供 Android 和 iPhone 都会读取的设置：颜色、背景、按键形状与间距、文字和候选栏。文件里的其他项目会原样保留。iPhone 上键盘底色由系统绘制，所以键盘底色和背景只对 Android 有效。用到透明度、多色渐变或图片的文件是第 2 版，其余仍是第 1 版。图片会在浏览器里裁剪、模糊、压暗并压缩，不会上传。
 
 ## 导入松烟
 
@@ -38,7 +38,7 @@ A static web editor for Songyan keyboard appearance files (`*.songyanappearance.
 
 1. Start from a built-in appearance, or import a file (picker, drag and drop, or paste JSON).
 2. Click "Download file". On a phone you can also use "Share" or "Copy JSON".
-3. The preview switches between light and dark, Android and iPhone, and typing and toolbar. The editor only offers settings both Android and iPhone read: colours, key border and the candidate bar. Everything else in a file is kept as it is. On iPhone the system draws the keyboard background, so the keyboard background colour and background picture only apply on Android. A file that uses transparency, a multi-colour gradient or a picture is version 2; every other file stays version 1. Pictures are cropped, blurred, darkened and compressed in your browser and never uploaded.
+3. The preview switches between light and dark, Android and iPhone, and typing and toolbar. The editor only offers settings both Android and iPhone read: colours, background, key shape and spacing, text and the candidate bar. Everything else in a file is kept as it is. On iPhone the system draws the keyboard background, so the keyboard background colour and background picture only apply on Android. A file that uses transparency, a multi-colour gradient or a picture is version 2; every other file stays version 1. Pictures are cropped, blurred, darkened and compressed in your browser and never uploaded.
 
 ## Import into Songyan
 
