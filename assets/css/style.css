@@ -220,14 +220,16 @@ body.dragging .drop-hint { display: flex; }
 .pv-kb { background: var(--surface); }
 .pv-reading { display: flex; align-items: center; height: calc(var(--reading-h) * var(--u)); padding: 0 calc(12 * var(--u)); font-size: calc(15 * var(--u)); color: var(--c-candSecondary); }
 .pv-reading-text { text-decoration: underline; text-underline-offset: 0.2em; }
-.pv-strip { display: flex; align-items: stretch; height: calc(var(--bar-h) * var(--u)); min-width: 0; }
+.pv-strip { display: flex; align-items: stretch; box-sizing: content-box; height: calc(var(--bar-h) * var(--u)); padding: calc(var(--bar-pt) * var(--u)) 0 calc(var(--bar-pb) * var(--u)); min-width: 0; }
 .pv-cells { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: calc(var(--cell-gap) * var(--u)); padding-left: calc(max(0, var(--start) - var(--chip-pad)) * var(--u)); overflow: hidden; }
 .pv-cell { position: relative; isolation: isolate; flex: 1 0 auto; min-width: calc(44 * var(--u)); display: flex; align-items: center; justify-content: center; padding: 0 calc(var(--chip-pad) * var(--u)); font-size: calc(var(--f-cand) * var(--u)); color: var(--c-cand); white-space: nowrap; }
 [data-platform="android"] .pv-cell { flex: 0 0 auto; }
 .pv-cell::before { content: ""; position: absolute; z-index: -1; inset: calc(var(--chip-y) * var(--u)) calc(var(--chip-gap) * var(--u) / 2); border-radius: calc(var(--chip-radius) * var(--u)); }
 .pv-cell[data-selected="true"] { color: var(--c-candSelected); }
 .pv-cell[data-selected="true"]::before { background: var(--c-selected); }
-.pv-toolbar { display: flex; align-items: center; justify-content: space-evenly; height: calc(var(--bar-h) * var(--u)); color: var(--c-candSecondary); }
+.pv-toolbar { display: flex; align-items: center; justify-content: space-evenly; box-sizing: content-box; height: calc(var(--bar-h) * var(--u)); padding: calc(var(--bar-pt) * var(--u)) 0 calc(var(--bar-pb) * var(--u)); color: var(--c-candSecondary); }
+[data-platform="iphone"] .pv-toolbar { justify-content: space-around; padding-inline: calc(9 * var(--u)); padding-bottom: calc((var(--bar-pb) + 3.6) * var(--u)); padding-top: calc((var(--bar-pt) - 3.6) * var(--u)); }
+[data-platform="iphone"] .pv-tool .pv-icon { width: calc(19 * var(--u)); height: calc(19 * var(--u)); }
 .pv-tool { display: grid; place-items: center; }
 .pv-tool .pv-icon { width: calc(24 * var(--u)); height: calc(24 * var(--u)); }
 .pv-expand { flex: none; display: grid; place-items: center; width: calc(48 * var(--u)); margin: 0; padding: 0; border: 0; background: none; color: var(--c-candSecondary); cursor: pointer; }
@@ -249,7 +251,8 @@ body.dragging .drop-hint { display: flex; }
 .pv-control-text { font-size: calc(var(--f-control) * var(--u)); }
 .pv-space-text { font-size: calc(var(--f-space) * var(--u)); }
 .pv-enter-text { font-size: calc(var(--f-enter) * var(--u)); }
-.pv-hint { position: absolute; top: calc(3 * var(--u)); right: calc(4 * var(--u)); font-size: calc(var(--f-hint) * var(--u)); line-height: 1; color: var(--c-secondaryText); }
+.pv-hint { position: absolute; top: calc(3 * var(--u)); right: calc(4 * var(--u)); font-size: calc(var(--f-hint) * var(--u)); line-height: 1; color: var(--c-secondaryText); opacity: var(--hint-alpha); }
+[data-platform="iphone"] .pv-face { corner-shape: squircle; }
 .pv-key.control .pv-face { background: var(--c-control); }
 .pv-key.accent .pv-face { background: var(--c-accent); color: var(--c-accentText); }
 .pv-key.down .pv-face { background: var(--c-pressed); }
@@ -270,8 +273,10 @@ body.dragging .drop-hint { display: flex; }
 .pv-item[data-selected="true"] { background: var(--c-selected); color: var(--c-candSelected); }
 
 .pv-sys { position: relative; display: flex; align-items: flex-start; justify-content: space-between; height: calc(var(--sys-h) * var(--u)); padding: calc(10 * var(--u)) calc(26 * var(--u)) 0; color: rgba(0, 0, 0, 0.72); }
+[data-platform="iphone"] .pv-sys { padding: calc(19.7 * var(--u)) calc(28 * var(--u)) 0; }
 [data-mode="dark"] .pv-sys { color: rgba(255, 255, 255, 0.82); }
 .pv-sys-icon .pv-icon { width: calc(26 * var(--u)); height: calc(26 * var(--u)); }
+[data-platform="iphone"] .pv-sys-icon .pv-icon { width: calc(32 * var(--u)); height: calc(32 * var(--u)); }
 .pv-pill { position: absolute; bottom: calc(8 * var(--u)); left: 50%; width: calc(134 * var(--u)); height: calc(5 * var(--u)); border-radius: 999px; transform: translateX(-50%); background: currentColor; opacity: 0.9; }
 [data-platform="android"] .pv-sys { color: var(--c-text); }
 [data-platform="android"] .pv-pill { width: calc(108 * var(--u)); height: calc(4 * var(--u)); bottom: calc(9 * var(--u)); opacity: 0.55; }

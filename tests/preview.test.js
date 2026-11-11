@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { previewMetrics, effectiveBarHeight, IOS_SURFACE } from '../assets/js/preview.js';
+import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, androidBar } from '../assets/js/preview.js';
 import { PRESETS, presetById } from '../assets/js/presets.js';
 import { systemDefaultDocument, normalizeDocument } from '../assets/js/format.js';
 
@@ -62,10 +62,43 @@ test('iPhone draws the skin: gaps grow with the inset, radius and sizes follow t
   assert.ok(custom.font.letter > plain.font.letter);
   assert.equal(custom.bar.natural, false);
   assert.equal(plain.bar.natural, true);
-  // The default skin gives the measured gaps: 6 pt across, 9 + 2 x 1 = 11 pt down.
-  assert.equal(plain.gapX + 2 * plain.capInsetX, 6);
-  assert.equal(plain.rowGap + 2 * plain.capInsetY, 11);
-  assert.equal(plain.rowHeight - 2 * plain.capInsetY, 42);
+  // The default skin gives the measured gaps: 4 pt across, 4 + 2 x 1 = 6 pt down, keys 52 pt tall.
+  assert.equal(plain.gapX + 2 * plain.capInsetX, 4);
+  assert.equal(plain.rowGap + 2 * plain.capInsetY, 6);
+  assert.equal(plain.rowHeight - 2 * plain.capInsetY, 52);
+});
+
+test('the iPhone preview matches the real keyboard (402 pt, light, system default), measured in the simulator', () => {
+  const m = previewMetrics('iphone', normalizeDocument(systemDefaultDocument()));
+  const [r1, r2, r3, r4] = iphoneKeyRects(m, 402);
+  const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 0.5, `${label}: ${actual} vs ${expected}`);
+  // Keyboard top to first key row: 9 + 40 + 3 + 1.
+  near(r1[0].y, 53, 'row 1 top');
+  near(r2[0].y - r1[0].y, 58, 'row pitch');
+  near(r3[0].y - r2[0].y, 58, 'row pitch');
+  near(r4[0].y - r3[0].y, 58, 'row pitch');
+  for (const rect of r1) { near(rect.w, 35.67, 'letter width'); near(rect.h, 52, 'key height'); }
+  near(r1[0].x, 4, 'left inset');
+  near(402 - (r1[9].x + r1[9].w), 4, 'right inset');
+  near(r1[1].x - (r1[0].x + r1[0].w), 4, 'gap across');
+  near(r2[0].x, 24, 'row 2 indent');
+  near(r3[0].w, 55.67, 'shift width');
+  near(r3[8].w, 55.67, 'delete width');
+  near(r3[1].x, 4 + 55.67 + 4, 'z position');
+  [40, 40, 40, 134, 40, 80].forEach((width, index) => near(r4[index].w, width, `bottom key ${index}`));
+});
+
+test('the candidate bar draws each platform\'s own height and padding', () => {
+  const doc = normalizeDocument(systemDefaultDocument());
+  doc.candidateBar.collapsed.height = 52;
+  doc.candidateBar.collapsed.cellPaddingX = 12;
+  const ios = previewMetrics('iphone', doc);
+  const android = previewMetrics('android', doc);
+  assert.equal(ios.bar.height, 52);
+  assert.equal(ios.bar.chipPad, 12);
+  assert.equal(android.bar.height, 60);
+  assert.equal(android.bar.chipPad, 15);
+  assert.deepEqual(androidBar({ height: 40, cellPaddingX: 7, cellSpacing: 0 }), { height: 48, chipPad: 10, cellSpacing: 0 });
 });
 
 test('every preset yields finite metrics on both platforms', () => {

@@ -89,6 +89,21 @@ export function effectiveBarHeight(height, candidateSize) {
   return Math.max(clamped, Math.max(Math.ceil(candidateSize * 1.25 + 3), 36));
 }
 
+/**
+ * What Android draws for the candidate bar's numbers (CandidateBarStyle.of): the platform's 48 dp row, 10 dp
+ * cell padding and no gap while a value equals the system default's, otherwise the value plus an offset (8 dp
+ * of height with a 48 dp floor, 3 dp of padding). Kept apart so it can follow the app if that changes.
+ */
+export function androidBar(collapsed) {
+  const customHeight = collapsed.height !== DEFAULT_BAR.height;
+  const customPadding = collapsed.cellPaddingX !== DEFAULT_BAR.cellPaddingX;
+  return {
+    height: customHeight ? Math.max(48, clamp(collapsed.height, 36, 56) + 8) : 48,
+    chipPad: customPadding ? collapsed.cellPaddingX + 3 : 10,
+    cellSpacing: collapsed.cellSpacing !== DEFAULT_BAR.cellSpacing ? collapsed.cellSpacing : 0,
+  };
+}
+
 /** Everything the drawing needs as plain numbers, so the rules are testable without a DOM. */
 export function previewMetrics(platform, doc) {
   const { skin, candidateBar: bar } = doc;
@@ -101,8 +116,6 @@ export function previewMetrics(platform, doc) {
     colGap: bar.expanded.columnSpacing,
   };
   if (platform === 'android') {
-    const customHeight = collapsed.height !== DEFAULT_BAR.height;
-    const customPadding = collapsed.cellPaddingX !== DEFAULT_BAR.cellPaddingX;
     return {
       platform,
       refWidth: 411,
@@ -121,15 +134,15 @@ export function previewMetrics(platform, doc) {
       weight: 'regular',
       font: { letter: 22, hint: 11, control: 14, space: 16, enter: 15, candidate: 18, comment: 12 },
       bar: {
-        height: customHeight ? Math.max(48, clamp(collapsed.height, 36, 56) + 8) : 48,
-        chipPad: customPadding ? collapsed.cellPaddingX + 3 : 10,
+        ...androidBar(collapsed),
         chipGap: 8,
         chipRadius: 10,
         chipInsetY: 5,
-        cellSpacing: collapsed.cellSpacing !== DEFAULT_BAR.cellSpacing ? collapsed.cellSpacing : 0,
         startPad: 12,
         natural: true,
         reading: 0,
+        padTop: 0,
+        padBottom: 0,
       },
       expanded: { ...expanded, fullRowLength: 8 },
       showsGlobe: true,
@@ -137,19 +150,21 @@ export function previewMetrics(platform, doc) {
     };
   }
   const scale = type.keySize / 22;
+  // Measured on an iPhone 17 Pro (402 pt wide) and read from the keyboard's layout code: a key cell is 54 pt tall
+  // with 4 pt between cells both ways, and the skin's inset is taken off every side of the cell, so the default
+  // skin (inset 0 x 1) shows keys 52 pt tall, 4 pt apart across and 6 pt apart down. Rows have 4 pt side padding.
+  // Above the keys sit 9 pt, the candidate bar and 3 pt; below them 4 pt, then the globe row.
   return {
     platform,
-    // Measured on an iPhone 17 Pro (402 pt wide) with the system default skin (inset 0 x 1): caps 42 pt tall,
-    // about 6 pt between keys and 11 pt between rows. A skin's own inset adds to those gaps on both sides of a key.
     refWidth: 402,
-    sidePad: 3,
-    gapX: 6,
-    rowHeight: 44,
-    rowGap: 9,
+    sidePad: 4,
+    gapX: 4,
+    rowHeight: 54,
+    rowGap: 4,
     capInsetX: skin.spacing.visualInsetX,
     capInsetY: skin.spacing.visualInsetY,
-    topPad: 6,
-    bottomPad: 6,
+    topPad: 0,
+    bottomPad: 4,
     radius: skin.keycap.cornerRadius,
     border: skin.keycap.borderWidth,
     shadow: skin.keycap.shadow === 'subtle',
@@ -169,11 +184,45 @@ export function previewMetrics(platform, doc) {
       startPad: collapsed.cellPaddingX + 4,
       natural: collapsed.fillsAvailableWidth === false,
       reading: bar.compositionRow.visible === 'hidden' ? 0 : 24,
+      padTop: 9,
+      padBottom: 3,
     },
     expanded: { ...expanded, fullRowLength: bar.expanded.fullRowTextLength },
     showsGlobe: false,
-    systemRow: 56,
+    systemRow: 75,
   };
+}
+
+/** Weights of the bottom row on iPhone: 123, 中/英, comma, space, full stop, go. */
+export const IPHONE_BOTTOM_WEIGHTS = [1, 1, 1, 3.35, 1, 2];
+
+/**
+ * The visible key rectangles (pt, x from the left edge, y from the keyboard's top) of the iPhone preview, worked
+ * out the way the stylesheet lays them out: the same arithmetic as the app's rows, so a test can compare them with
+ * measurements of the real keyboard. Rows: three letter rows and the bottom row. `composing` adds the reading row above the bar.
+ */
+export function iphoneKeyRects(m, width = m.refWidth, composing = false) {
+  const top = (composing ? m.bar.reading : 0) + m.bar.padTop + m.bar.height + m.bar.padBottom + m.topPad;
+  const cellW = (width - 2 * m.sidePad - 9 * m.gapX) / 10;
+  const visible = (x, row, w) => ({
+    x: x + m.capInsetX,
+    y: top + row * (m.rowHeight + m.rowGap) + m.capInsetY,
+    w: w - 2 * m.capInsetX,
+    h: m.rowHeight - 2 * m.capInsetY,
+  });
+  const run = (x0, widths, row) => {
+    let x = x0;
+    return widths.map((w) => { const rect = visible(x, row, w); x += w + m.gapX; return rect; });
+  };
+  const side = (width - 2 * m.sidePad - 8 * m.gapX - 7 * cellW) / 2;
+  const total = IPHONE_BOTTOM_WEIGHTS.reduce((a, b) => a + b, 0);
+  const unit = (width - 2 * m.sidePad - 5 * m.gapX) / total;
+  return [
+    run(m.sidePad, Array(10).fill(cellW), 0),
+    run(m.sidePad + (cellW + m.gapX) / 2, Array(9).fill(cellW), 1),
+    run(m.sidePad, [side, ...Array(7).fill(cellW), side], 2),
+    run(m.sidePad, IPHONE_BOTTOM_WEIGHTS.map((w) => w * unit), 3),
+  ];
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -267,6 +316,8 @@ export function renderPreview(host, doc, options) {
   set('f-cand', m.font.candidate);
   set('f-comment', m.font.comment);
   set('bar-h', m.bar.height);
+  set('bar-pt', m.bar.padTop);
+  set('bar-pb', m.bar.padBottom);
   set('chip-pad', m.bar.chipPad);
   set('chip-gap', m.bar.chipGap);
   set('chip-radius', m.bar.chipRadius);
@@ -280,6 +331,7 @@ export function renderPreview(host, doc, options) {
   set('exp-col-gap', m.expanded.colGap);
   set('exp-columns', m.expanded.mode === 'list' ? 1 : m.expanded.columns);
   set('keys-h', m.topPad + KEY_ROWS * m.rowHeight + (KEY_ROWS - 1) * m.rowGap + m.bottomPad);
+  set('hint-alpha', android ? 1 : 0.6);
 
   if (typing && m.bar.reading > 0) {
     const reading = el('div', 'pv-reading');
@@ -383,6 +435,18 @@ function buildKeys(m, t) {
     keys.append(row);
   });
   const bottom = el('div', 'pv-row pv-bottom');
+  if (m.platform === 'iphone') {
+    // 123, 中/英, comma, space, full stop, go: widths 40 / 40 / 40 / 134 / 40 / 80 pt on a 402 pt screen.
+    const weights = IPHONE_BOTTOM_WEIGHTS;
+    bottom.append(key(el('span', 'pv-label pv-control-text', t('numbersKey')), 'control', weights[0]));
+    bottom.append(key(el('span', 'pv-label pv-control-text', t('languageKey')), 'control', weights[1]));
+    bottom.append(key(el('span', 'pv-label', '，'), 'letter', weights[2]));
+    bottom.append(key(el('span', 'pv-label pv-space-text', t('space')), 'space', weights[3]));
+    bottom.append(key(el('span', 'pv-label', '。'), 'letter', weights[4]));
+    bottom.append(key(el('span', 'pv-label pv-enter-text', t('enter')), 'accent', weights[5]));
+    keys.append(bottom);
+    return keys;
+  }
   bottom.append(key(el('span', 'pv-label pv-control-text', t('numbersKey')), 'control', 1.4));
   bottom.append(key(el('span', 'pv-label pv-control-text', t('languageKey')), 'control', 1.2));
   if (m.showsGlobe) bottom.append(key(icon('globe'), 'control', 1));

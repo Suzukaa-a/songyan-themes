@@ -762,13 +762,13 @@ const SYSTEM_DEFAULT = normalizeDocument({
     variants: {
       light: {
         colors: {
-          panel: '#DFE2E7', key: '#FAFBFC', control: '#CBD0D8', accent: '#CCDBEE', accentText: '#284D7A',
+          panel: '#DFE2E7', key: '#FFFFFF', control: '#CBD0D8', accent: '#44598F', accentText: '#FFFFFF',
           text: '#252930', secondaryText: '#505863', selected: '#CCDBEE', pressed: '#BEC8D6',
         },
       },
       dark: {
         colors: {
-          panel: '#25272C', key: '#44474E', control: '#363940', accent: '#3B536F', accentText: '#F0F5FC',
+          panel: '#25272C', key: '#44474E', control: '#363940', accent: '#4C65A6', accentText: '#F0F5FC',
           text: '#F4F5F7', secondaryText: '#BDC3CD', selected: '#3B536F', pressed: '#5A626F',
         },
       },
