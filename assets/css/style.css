@@ -175,7 +175,9 @@ body.dragging .drop-hint { display: flex; }
 .preview-card { padding: 14px 16px 16px; }
 .title-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; margin-bottom: 10px; }
 .title-line .note strong { color: var(--text); font-weight: 600; }
-.toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.toggles { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 6px; margin-bottom: 12px; }
+.toggles .seg { padding: 2px; }
+.toggles .seg button { padding: 0 8px; }
 .preview-note { margin-top: 10px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions .btn { flex: 1 1 auto; }
