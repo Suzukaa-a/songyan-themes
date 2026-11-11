@@ -1,20 +1,52 @@
-// The editor page. The form is built from the field table in format.js; nothing here knows a field by name
-// except where the UI needs a special control (colours, backgrounds, the optional width switch).
+// The editor page. The form is built from the field table in format.js. Only settings that both apps read
+// are offered (see EDITABLE); every other field stays in the document exactly as it came from the starting
+// look or the imported file, so exports never lose anything.
 
 import {
   FIELDS, COLOR_NAMES, MODES, FILE_EXTENSION, MAX_DOCUMENT_BYTES, FormatError, ErrorCode, CONTRAST_PAIRS,
   decodeImported, encodeDocument, normalizeDocument, readDocument, resolvedColors, getPath, setPath,
-  withNewIdentity, isHexColor,
+  withNewIdentity, parseHexInput, sameDocument,
 } from './format.js';
 import { PRESETS, presetById } from './presets.js';
 import { translator, describeError, LANGS } from './i18n.js';
 import { renderPreview } from './preview.js';
 
 const DRAFT_KEY = 'songyan-themes.draft.v1';
+const BASELINE_KEY = 'songyan-themes.baseline.v1';
 const LANG_KEY = 'songyan-themes.lang';
-const SECTIONS = ['basic', 'colors', 'background', 'typography', 'keycap', 'spacing', 'candidate'];
+const SECTIONS = ['basic', 'colors', 'keycap', 'candidate'];
 
-const state = { lang: 'zh', doc: null, mode: 'light', platform: 'android', expanded: false };
+/**
+ * The fields the editor shows: the ones Android and iPhone both read. Android takes only the skin's colours
+ * and whether a key border exists, and from the candidate bar only the height, padding, spacing and the
+ * expanded layout; the rest of a file is kept untouched but not offered.
+ */
+const EDITABLE = new Set([
+  'name', 'author', 'appearance',
+  'skin.keycap.borderWidth',
+  'candidateBar.collapsed.height', 'candidateBar.collapsed.cellPaddingX', 'candidateBar.collapsed.cellSpacing',
+  'candidateBar.expanded.mode', 'candidateBar.expanded.columns',
+  'candidateBar.expanded.rowSpacing', 'candidateBar.expanded.columnSpacing',
+]);
+/** Rows tucked under "更多" because they are rarely changed. */
+const MORE = new Set([
+  'candidateBar.collapsed.cellPaddingX', 'candidateBar.collapsed.cellSpacing',
+  'candidateBar.expanded.rowSpacing', 'candidateBar.expanded.columnSpacing',
+]);
+const COLOR_GROUPS = [
+  ['grp_keys', ['panel', 'key', 'control', 'border']],
+  ['grp_text', ['text', 'secondaryText']],
+  ['grp_state', ['accent', 'accentText', 'pressed', 'selected']],
+];
+/** Rows that only matter in some situations; the row stays visible but disabled otherwise. */
+const ENABLED_WHEN = {
+  'candidateBar.expanded.columns': (doc) => doc.candidateBar.expanded.mode === 'grid',
+};
+const UNITS = { 'candidateBar.expanded.columns': 'unitColumns' };
+
+const state = { lang: 'zh', doc: null, mode: 'light', platform: 'android', top: 'candidates', expanded: false };
+const moreOpen = new Set();
+const fieldEls = new Map();
 let t = translator('zh');
 const $ = (selector) => document.querySelector(selector);
 const hintEls = new Map();
@@ -34,7 +66,7 @@ function h(tag, attrs = {}, ...children) {
     else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
     else node.setAttribute(key, value === true ? '' : value);
   }
-  node.append(...children.flat().filter((child) => child !== null && child !== undefined));
+  node.append(...children.flat(Infinity).filter((child) => child !== null && child !== undefined));
   return node;
 }
 
@@ -60,6 +92,7 @@ let saveTimer = 0;
 function afterChange() {
   refreshPreview();
   updateHints();
+  updateEnabled();
   $('#doc-name').textContent = state.doc.name;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => store.set(DRAFT_KEY, JSON.stringify(state.doc)), 250);
@@ -83,14 +116,18 @@ function commit(path, value) {
 }
 
 function refreshPreview() {
-  renderPreview($('#preview'), normalizeDocument(state.doc), {
+  const doc = normalizeDocument(state.doc);
+  renderPreview($('#preview'), doc, {
     mode: state.mode,
     platform: state.platform,
+    top: state.top,
     expanded: state.expanded,
     t,
     onToggleExpand: () => { state.expanded = !state.expanded; refreshPreview(); },
   });
-  $('#iphone-note').hidden = state.platform !== 'iphone';
+  const note = $('#preview-note');
+  note.replaceChildren(t('previewHint'));
+  if (state.platform === 'iphone') note.append(h('br'), t('iphoneNote'));
 }
 
 function updateHints() {
@@ -105,13 +142,24 @@ function updateHints() {
   }
 }
 
+function updateEnabled() {
+  for (const [path, rule] of Object.entries(ENABLED_WHEN)) {
+    const field = fieldEls.get(path);
+    if (!field) continue;
+    const on = rule(state.doc);
+    field.classList.toggle('disabled', !on);
+    if (on) field.removeAttribute('title'); else field.title = t('gridOnly');
+    for (const control of field.querySelectorAll('input, select')) control.disabled = !on;
+  }
+}
+
 // ------------------------------------------------------------------ controls
 const labelFor = (row) => t(`f.${row.relative ?? row.path}`);
 const valueLabel = (row, value) => t(`v.${row.relative ?? row.path}.${value}`);
 
 function numberControl(row, id) {
   const value = getPath(state.doc, row.path);
-  const range = h('input', { type: 'range', min: row.min, max: row.max, step: row.step, value, 'aria-label': labelFor(row), tabindex: '-1' });
+  const range = h('input', { type: 'range', min: row.min, max: row.max, step: row.step, value, 'aria-label': labelFor(row) });
   const number = h('input', { type: 'number', id, min: row.min, max: row.max, step: row.step, value, inputmode: 'decimal' });
   const snap = (raw) => Math.min(row.max, Math.max(row.min, row.type === 'int' ? Math.round(raw) : raw));
   range.addEventListener('input', () => {
@@ -122,8 +170,7 @@ function numberControl(row, id) {
   number.addEventListener('input', () => {
     const raw = Number(number.value);
     const ok = number.value.trim() !== '' && Number.isFinite(raw) && raw >= row.min && raw <= row.max && (row.type !== 'int' || Number.isInteger(raw));
-    number.toggleAttribute('aria-invalid', !ok);
-    if (number.hasAttribute('aria-invalid')) number.setAttribute('aria-invalid', 'true');
+    if (ok) number.removeAttribute('aria-invalid'); else number.setAttribute('aria-invalid', 'true');
     if (ok) { range.value = String(raw); commit(row.path, raw); }
   });
   number.addEventListener('change', () => {
@@ -134,7 +181,9 @@ function numberControl(row, id) {
     number.removeAttribute('aria-invalid');
     commit(row.path, fixed);
   });
-  return h('div', { class: 'ctl' }, range, number, row.type === 'int' ? null : h('span', { class: 'unit' }, t('unitPt')));
+  // The unit cell is always there so the number boxes line up even for a row without a unit.
+  const unit = row.type === 'int' ? (UNITS[row.path] ? t(UNITS[row.path]) : '') : t('unitPt');
+  return h('div', { class: 'ctl slider' }, range, number, h('span', { class: 'unit' }, unit));
 }
 
 function enumControl(row, id) {
@@ -142,20 +191,6 @@ function enumControl(row, id) {
   const select = h('select', { id }, row.values.map((value) => h('option', { value, selected: value === current }, valueLabel(row, value))));
   select.addEventListener('change', () => commit(row.path, select.value));
   return h('div', { class: 'ctl' }, select);
-}
-
-function triStateControl(row, id) {
-  const current = getPath(state.doc, row.path);
-  const key = current === undefined ? 'unset' : String(current);
-  const select = h('select', { id }, ['unset', 'true', 'false'].map((value) => h('option', { value, selected: value === key }, t(`v.${row.relative}.${value}`))));
-  select.addEventListener('change', () => commit(row.path, select.value === 'unset' ? undefined : select.value === 'true'));
-  return h('div', { class: 'ctl' }, select);
-}
-
-function boolControl(row, id) {
-  const box = h('input', { type: 'checkbox', id, checked: Boolean(getPath(state.doc, row.path)) });
-  box.addEventListener('change', () => commit(row.path, box.checked));
-  return h('div', { class: 'ctl' }, box);
 }
 
 function textControl(row, id, maxlength) {
@@ -175,29 +210,46 @@ function textControl(row, id, maxlength) {
   return h('div', { class: 'ctl' }, input);
 }
 
-/** A colour picker plus a hex box; `onCommit` gets only valid `#RRGGBB` values. */
+/**
+ * A swatch that opens the system colour picker beside a hex box. `onCommit` gets only valid `#RRGGBB`
+ * values. The box takes `#abc`, `abc` and `#aabbcc`; it is rewritten to `#RRGGBB` when you leave it, and a
+ * value that is not a colour is marked but kept so you can fix it.
+ */
 function colorCell({ id, label, value, onCommit }) {
-  const picker = h('input', { type: 'color', 'aria-label': label, value: value.toLowerCase(), tabindex: '-1' });
-  const hex = h('input', { type: 'text', id, maxlength: 7, value: value.toUpperCase(), spellcheck: 'false', autocomplete: 'off', 'aria-label': t('colorHexLabel', { label }) });
-  picker.addEventListener('input', () => {
-    hex.value = picker.value.toUpperCase();
-    hex.removeAttribute('aria-invalid');
-    onCommit(hex.value);
-  });
+  let committed = value.toUpperCase();
+  const picker = h('input', { type: 'color', 'aria-label': t('colorPickerLabel', { label }), value: value.toLowerCase() });
+  const hex = h('input', { type: 'text', id, maxlength: 12, value: committed, spellcheck: 'false', autocomplete: 'off', 'aria-label': t('colorHexLabel', { label }) });
+  const message = h('div', { class: 'hint', role: 'alert' });
+  const box = h('div', { class: 'color-cell' }, picker, hex);
+  const setInvalid = (bad) => {
+    box.classList.toggle('invalid', bad);
+    if (bad) hex.setAttribute('aria-invalid', 'true'); else hex.removeAttribute('aria-invalid');
+    message.textContent = bad ? t('hexInvalid') : '';
+  };
+  const accept = (parsed) => {
+    setInvalid(false);
+    picker.value = parsed.toLowerCase();
+    if (parsed !== committed) { committed = parsed; onCommit(parsed); }
+  };
+  picker.addEventListener('input', () => { hex.value = picker.value.toUpperCase(); accept(picker.value.toUpperCase()); });
   hex.addEventListener('input', () => {
-    const text = hex.value.trim();
-    const ok = isHexColor(text);
-    if (ok) { hex.removeAttribute('aria-invalid'); picker.value = text.toLowerCase(); onCommit(text.toUpperCase()); }
-    else hex.setAttribute('aria-invalid', 'true');
+    // Only a complete six-digit colour applies while typing; #abc waits for Enter or leaving the box.
+    const parsed = /^\s*#?[0-9a-fA-F]{6}\s*$/.test(hex.value) ? parseHexInput(hex.value) : null;
+    if (parsed) accept(parsed); else if (box.classList.contains('invalid')) setInvalid(false);
   });
-  hex.addEventListener('blur', () => {
-    if (!isHexColor(hex.value.trim())) { hex.value = picker.value.toUpperCase(); hex.removeAttribute('aria-invalid'); }
-  });
-  return h('div', { class: 'color-cell' }, picker, hex);
+  const finish = () => {
+    const parsed = parseHexInput(hex.value);
+    if (parsed) { hex.value = parsed; accept(parsed); } else setInvalid(true);
+  };
+  hex.addEventListener('blur', finish);
+  hex.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); finish(); } });
+  return h('div', { class: 'color-wrap' }, box, message);
 }
 
 function fieldRow(row, control, id) {
-  return h('div', { class: 'field' }, h('label', { for: id }, labelFor(row)), control);
+  const field = h('div', { class: 'field' }, h('label', { for: id }, labelFor(row)), control);
+  fieldEls.set(row.path, field);
+  return field;
 }
 
 function simpleField(row) {
@@ -205,98 +257,64 @@ function simpleField(row) {
   let control;
   if (row.type === 'number' || row.type === 'int') control = numberControl(row, id);
   else if (row.type === 'enum') control = enumControl(row, id);
-  else if (row.type === 'bool' && row.optional) control = triStateControl(row, id);
-  else if (row.type === 'bool') control = boolControl(row, id);
   else control = textControl(row, id, row.type === 'id' ? 80 : 60);
-  const field = fieldRow(row, control, id);
-  if (row.path === 'candidateBar.expanded.columns') field.append(h('div', { class: 'hint' }, t('gridOnly')));
-  return field;
+  return fieldRow(row, control, id);
 }
 
 // ------------------------------------------------------------------ sections
 function colorsSection() {
   const rows = FIELDS.filter((row) => row.section === 'colors');
-  const grid = h('div', { class: 'color-grid' },
-    h('span', { class: 'head head-role' }, ''),
-    h('span', { class: 'head' }, t('modeLight')),
-    h('span', { class: 'head' }, t('modeDark')));
-  for (const role of COLOR_NAMES) {
-    const roleId = nextId('role');
-    grid.append(h('span', { class: 'role', id: roleId }, t(`role.${role}`)));
-    for (const mode of MODES) {
-      const row = rows.find((candidate) => candidate.role === role && candidate.mode === mode);
-      const label = `${t(`role.${role}`)}（${t(mode)}）`;
-      const cell = colorCell({
-        id: nextId('c'), label, value: getPath(state.doc, row.path), onCommit: (hex) => commit(row.path, hex),
+  const head = h('div', { class: 'color-head' },
+    h('span', { class: 'head-role' }, ''),
+    h('span', {}, t('modeLight')),
+    h('span', {}, t('modeDark')));
+  const groups = COLOR_GROUPS.map(([titleKey, roles]) => h('div', { class: 'color-group' },
+    h('h3', {}, t(titleKey)),
+    roles.filter((role) => COLOR_NAMES.includes(role)).map((role) => {
+      const cells = MODES.map((mode) => {
+        const row = rows.find((candidate) => candidate.role === role && candidate.mode === mode);
+        const label = `${t(`role.${role}`)}（${t(mode)}）`;
+        const cell = colorCell({ id: nextId('c'), label, value: getPath(state.doc, row.path), onCommit: (hex) => commit(row.path, hex) });
+        if (role in CONTRAST_PAIRS) {
+          const hint = h('div', { class: 'hint', 'aria-live': 'polite' });
+          hintEls.set(`${mode}.${role}`, hint);
+          cell.append(hint);
+        }
+        return cell;
       });
-      if (role in CONTRAST_PAIRS) {
-        const hint = h('div', { class: 'hint', 'aria-live': 'polite' });
-        hintEls.set(`${mode}.${role}`, hint);
-        const wrap = h('div', {}, cell, hint);
-        grid.append(wrap);
-      } else {
-        grid.append(cell);
-      }
-    }
-  }
-  return [h('p', { class: 'note' }, t('colorsNote')), grid];
+      return h('div', { class: 'color-row' }, h('span', { class: 'role' }, t(`role.${role}`)), ...cells);
+    })));
+  return [h('p', { class: 'note' }, t('colorsNote')), head, ...groups];
 }
 
-function backgroundBlock(row) {
-  const mode = row.mode;
-  const base = `skin.variants.${mode}`;
-  const selectId = nextId('bg');
-  const body = h('div', { class: 'bg-body' });
-  const select = h('select', { id: selectId });
-  const render = () => {
-    const background = getPath(state.doc, row.path);
-    const type = background?.type ?? 'none';
-    select.replaceChildren(...[['none', 'bgNone'], ['solid', 'bgSolid'], ['linearGradient', 'bgGradient']]
-      .map(([value, key]) => h('option', { value, selected: value === type }, t(key))));
-    const cells = [];
-    const add = (key, labelKey) => {
-      const id = nextId('bgc');
-      const label = `${t(labelKey)}（${t(mode)}）`;
-      cells.push(h('div', { class: 'field' }, h('label', { for: id }, t(labelKey)),
-        colorCell({ id, label, value: background[key], onCommit: (hex) => commit(`${row.path}.${key}`, hex) })));
-    };
-    if (type === 'solid') add('color', 'bgColor');
-    if (type === 'linearGradient') { add('from', 'bgFrom'); add('to', 'bgTo'); }
-    body.replaceChildren(...cells);
-  };
-  select.addEventListener('change', () => {
-    const panel = getPath(state.doc, `${base}.colors.panel`);
-    const control = getPath(state.doc, `${base}.colors.control`);
-    const next = {
-      none: undefined,
-      solid: { type: 'solid', color: panel },
-      linearGradient: { type: 'linearGradient', from: panel, to: control, direction: 'vertical' },
-    }[select.value];
-    commit(row.path, next);
-    render();
-  });
-  render();
-  return h('div', { class: 'bg-block' }, h('div', { class: 'field' }, h('label', { for: selectId }, `${t('f.background')}（${t(mode)}）`), h('div', { class: 'ctl' }, select)), body);
+function moreBlock(rows) {
+  const details = h('details', { class: 'more' }, h('summary', {}, t('more')), rows.map(simpleField));
+  details.open = moreOpen.has('candidate');
+  details.addEventListener('toggle', () => { if (details.open) moreOpen.add('candidate'); else moreOpen.delete('candidate'); });
+  return details;
 }
 
 function section(name) {
-  const title = t(`secTitle_${name}`);
-  const legend = h('legend', {}, title);
+  const legend = h('legend', {}, t(`secTitle_${name}`));
   let content;
-  if (name === 'colors') content = colorsSection();
-  else if (name === 'background') {
-    content = [h('p', { class: 'note' }, t('backgroundAndroidOnly')), ...FIELDS.filter((row) => row.section === 'background').map(backgroundBlock)];
+  if (name === 'colors') {
+    content = colorsSection();
   } else {
     // The identifier is internal: it is kept and generated, never shown.
-    content = FIELDS.filter((row) => row.section === name && row.type !== 'id').map(simpleField);
+    const rows = FIELDS.filter((row) => row.section === name && row.type !== 'id' && EDITABLE.has(row.path));
+    const main = rows.filter((row) => !MORE.has(row.path));
+    const more = rows.filter((row) => MORE.has(row.path));
+    content = [main.map(simpleField), more.length ? moreBlock(more) : null];
   }
   return h('fieldset', { class: 'card' }, legend, content);
 }
 
 function buildForm() {
   hintEls.clear();
+  fieldEls.clear();
   $('#form').replaceChildren(...SECTIONS.map(section));
   updateHints();
+  updateEnabled();
 }
 
 // ------------------------------------------------------------------ chrome (language, presets, toggles)
@@ -305,10 +323,13 @@ function applyLanguage() {
   document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : 'en';
   document.title = t('title');
   for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
+  for (const node of document.querySelectorAll('[data-i18n-aria]')) node.setAttribute('aria-label', t(node.dataset.i18nAria));
   for (const button of document.querySelectorAll('[data-lang]')) button.setAttribute('aria-pressed', String(button.dataset.lang === state.lang));
   const select = $('#preset');
-  const selected = select.value || PRESETS[1].id;
-  select.replaceChildren(...PRESETS.map((preset) => h('option', { value: preset.id, selected: preset.id === selected }, preset.names[state.lang])));
+  select.replaceChildren(
+    h('option', { value: '', disabled: true, selected: true }, t('startMenu')),
+    ...PRESETS.map((preset) => h('option', { value: preset.id }, preset.names[state.lang])));
+  select.value = '';
   $('#paste-text').setAttribute('placeholder', '{ "formatVersion": 1, … }');
   buildForm();
   refreshPreview();
@@ -322,39 +343,82 @@ function setToggle(group, attr, value) {
 // ------------------------------------------------------------------ importing
 const builtinIds = new Set(PRESETS.map((preset) => preset.id));
 
+function setBaseline() {
+  store.set(BASELINE_KEY, JSON.stringify(state.doc));
+}
+
+/** Whether the draft differs from where it started. A missing starting point counts as changed. */
+function isDirty() {
+  const saved = store.get(BASELINE_KEY);
+  if (!saved) return true;
+  try {
+    return !sameDocument(state.doc, JSON.parse(saved));
+  } catch {
+    return true;
+  }
+}
+
 function adopt(document_, message) {
   // A copy of a built-in must not reuse its identity, or importing the export would collide with it.
   state.doc = builtinIds.has(document_.id) ? withNewIdentity(document_) : document_;
   state.expanded = false;
+  setBaseline();
   buildForm();
   afterChange();
   if (message) showMessage($('#messages'), message);
 }
 
-function importText(text) {
+/** Reads text and makes it the draft. Returns null on success, or the error. */
+function tryImport(text) {
   try {
     const { document: imported, kind } = decodeImported(text);
     const key = { document: 'importedDocument', skin: 'importedSkin', candidateBar: 'importedCandidateBar' }[kind];
     adopt(imported, t(key, { name: imported.name }));
-    return true;
+    return null;
   } catch (error) {
-    showError($('#messages'), error);
-    return false;
+    return error;
   }
 }
 
 async function importFile(file) {
   if (!file) return;
   if (file.size > MAX_DOCUMENT_BYTES) { showError($('#messages'), new FormatError(ErrorCode.OVERSIZE, '$')); return; }
-  importText(await file.text());
+  const error = tryImport(await file.text());
+  if (error) showError($('#messages'), error);
 }
 
-function startFromPreset() {
-  const preset = presetById($('#preset').value);
+function startFromPreset(id) {
+  const preset = presetById(id);
   if (!preset) return;
   const name = preset.names[state.lang];
   adopt(withNewIdentity(preset.document, `${name}${state.lang === 'zh' ? ' 副本' : ' copy'}`));
   showMessage($('#messages'), t('started', { name }));
+}
+
+// ------------------------------------------------------------------ paste dialog
+function openPasteDialog() {
+  const dialog = $('#paste-dialog');
+  $('#paste-error').textContent = '';
+  $('#paste-text').removeAttribute('aria-invalid');
+  dialog.showModal();
+  $('#paste-text').focus();
+}
+
+function submitPaste(event) {
+  event.preventDefault();
+  const area = $('#paste-text');
+  const fail = (text) => { $('#paste-error').textContent = text; area.setAttribute('aria-invalid', 'true'); area.focus(); };
+  if (area.value.trim() === '') { fail(t('pasteEmpty')); return; }
+  const error = tryImport(area.value);
+  if (error instanceof FormatError) {
+    const { message, path } = describeError(state.lang, error);
+    fail(path && path !== '$' ? `${message}（${t('errAt', { path })}）` : message);
+  } else if (error) {
+    fail(t('errGeneric'));
+  } else {
+    area.value = '';
+    $('#paste-dialog').close();
+  }
 }
 
 // ------------------------------------------------------------------ export
@@ -435,12 +499,26 @@ function loadInitialDocument() {
     } catch { /* an old or damaged draft is dropped */ }
   }
   state.doc = withNewIdentity(presetById('builtin-songyan').document, '我的键盘外观');
+  setBaseline();
   return false;
+}
+
+/** On a narrow screen the preview sticks to the top; headings and focused fields must stay below it. */
+function trackStickyOffset() {
+  const column = $('.preview-col');
+  const narrow = window.matchMedia('(max-width: 820px)');
+  const update = () => document.documentElement.style.setProperty('--sticky-offset', narrow.matches ? `${column.offsetHeight}px` : '0px');
+  new ResizeObserver(update).observe(column);
+  narrow.addEventListener('change', update);
+  update();
 }
 
 function wire() {
   for (const button of document.querySelectorAll('[data-lang]')) {
     button.addEventListener('click', () => { state.lang = button.dataset.lang; store.set(LANG_KEY, state.lang); applyLanguage(); });
+  }
+  for (const button of document.querySelectorAll('#top-seg button')) {
+    button.addEventListener('click', () => { state.top = button.dataset.top; setToggle('#top-seg', 'top', state.top); refreshPreview(); });
   }
   for (const button of document.querySelectorAll('#mode-seg button')) {
     button.addEventListener('click', () => { state.mode = button.dataset.mode; setToggle('#mode-seg', 'mode', state.mode); refreshPreview(); });
@@ -448,10 +526,19 @@ function wire() {
   for (const button of document.querySelectorAll('#platform-seg button')) {
     button.addEventListener('click', () => { state.platform = button.dataset.platform; setToggle('#platform-seg', 'platform', state.platform); refreshPreview(); });
   }
-  $('#start-btn').addEventListener('click', startFromPreset);
+  $('#preset').addEventListener('change', (event) => {
+    const select = event.target;
+    const id = select.value;
+    select.value = '';
+    if (!id) return;
+    if (isDirty() && !window.confirm(t('confirmReplace'))) return;
+    startFromPreset(id);
+  });
   $('#import-btn').addEventListener('click', () => $('#file').click());
   $('#file').addEventListener('change', async (event) => { await importFile(event.target.files[0]); event.target.value = ''; });
-  $('#paste-btn').addEventListener('click', () => { if (importText($('#paste-text').value)) $('#paste-text').value = ''; });
+  $('#paste-btn').addEventListener('click', openPasteDialog);
+  $('#paste-form').addEventListener('submit', submitPaste);
+  $('#paste-cancel').addEventListener('click', () => $('#paste-dialog').close());
   $('#download-btn').addEventListener('click', download);
   $('#copy-btn').addEventListener('click', copyJson);
   $('#share-btn').addEventListener('click', share);
@@ -469,6 +556,7 @@ function wire() {
     document.body.classList.remove('dragging');
     await importFile(event.dataTransfer.files[0]);
   });
+  trackStickyOffset();
 }
 
 const savedLang = store.get(LANG_KEY);

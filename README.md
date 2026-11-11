@@ -6,7 +6,7 @@
 
 1. 打开页面，从一个内置外观开始，或者导入已有的文件（选择文件、拖进页面、粘贴 JSON 都行）。
 2. 改完后点「下载文件」。手机上也可以点「分享」，或者「复制 JSON」。
-3. 预览里可以切换浅色 / 深色，以及 Android / iPhone。iPhone 上键盘底色由系统绘制，所以键盘底色和背景只对 Android 有效。
+3. 预览里可以切换浅色 / 深色、Android / iPhone，以及输入中 / 工具栏。编辑器只提供 Android 和 iPhone 都会读取的设置：颜色、按键边框和候选栏。文件里的其他项目会原样保留。iPhone 上键盘底色由系统绘制，所以键盘底色只对 Android 有效。
 
 ## 导入松烟
 
@@ -38,7 +38,7 @@ A static web editor for Songyan keyboard appearance files (`*.songyanappearance.
 
 1. Start from a built-in appearance, or import a file (picker, drag and drop, or paste JSON).
 2. Click "Download file". On a phone you can also use "Share" or "Copy JSON".
-3. The preview switches between light and dark, and between Android and iPhone. On iPhone the system draws the keyboard background, so the panel colour and background only apply on Android.
+3. The preview switches between light and dark, Android and iPhone, and typing and toolbar. The editor only offers settings both Android and iPhone read: colours, key border and the candidate bar. Everything else in a file is kept as it is. On iPhone the system draws the keyboard background, so the keyboard background colour only applies on Android.
 
 ## Import into Songyan
 

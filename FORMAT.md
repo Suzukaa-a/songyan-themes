@@ -18,8 +18,13 @@ Defined by the iOS app's `SkinKit`/`AppearanceKit`/`CandidateKit` and mirrored b
   `keycap`, `spacing`.
 - Strict: unknown fields, other versions and out-of-range values are rejected. Limits: 256 KiB per
   document, 128 KiB per skin or candidate bar.
-- On iOS the system draws the keyboard's own surface, so `panel` and `background` only take effect
-  on Android.
+- On iOS the system draws the keyboard's own surface, so `panel` only decides which candidate text
+  colours stay readable there; Android paints it. Neither app paints `background` today.
+- Android takes only the colours and whether `keycap.borderWidth` is above 0 from the skin; key size,
+  gaps, corner radius, shadow and typography are its own. iOS applies all of the skin. From the
+  candidate bar both apps read `collapsed.height`, `cellPaddingX`, `cellSpacing` and `expanded.mode`,
+  `columns`, `rowSpacing`, `columnSpacing`; `compositionRow`, `fillsAvailableWidth`,
+  `fullRowTextLength` and `controls` are not read by Android.
 
 ## Version 2 (proposal, not implemented)
 
