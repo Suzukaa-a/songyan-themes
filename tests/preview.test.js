@@ -64,7 +64,7 @@ test('iPhone draws the skin: gaps grow with the inset, radius and sizes follow t
   const custom = previewMetrics('iphone', edited());
   assert.equal(plain.refWidth, 402);
   assert.equal(plain.capInsetX, 0.75);
-  assert.equal(plain.capInsetY, 2);
+  assert.equal(plain.capInsetY, 2.5);
   assert.equal(custom.capInsetX, 3);
   assert.equal(custom.capInsetY, 4);
   assert.equal(custom.radius, 14);
@@ -72,25 +72,25 @@ test('iPhone draws the skin: gaps grow with the inset, radius and sizes follow t
   assert.ok(custom.font.letter > plain.font.letter);
   assert.equal(custom.bar.natural, false);
   assert.equal(plain.bar.natural, true);
-  // The default skin's gaps match Android's: 4 + 2 x 0.75 = 5.5 pt across, 4 + 2 x 2 = 8 pt down,
-  // keys 54 - 4 = 50 pt tall.
+  // The default skin's gaps match Android's: 4 + 2 x 0.75 = 5.5 pt across, 4 + 2 x 2.5 = 9 pt down,
+  // keys 54 - 5 = 49 pt tall.
   assert.equal(plain.gapX + 2 * plain.capInsetX, 5.5);
-  assert.equal(plain.rowGap + 2 * plain.capInsetY, 8);
-  assert.equal(plain.rowHeight - 2 * plain.capInsetY, 50);
+  assert.equal(plain.rowGap + 2 * plain.capInsetY, 9);
+  assert.equal(plain.rowHeight - 2 * plain.capInsetY, 49);
 });
 
 // The key cells were measured in the simulator; each cap sits inside its cell by the skin's inset
-// (0.75 across, 2 down for the system default), so caps are 1.5 pt narrower and 4 pt shorter.
+// (0.75 across, 2.5 down for the system default), so caps are 1.5 pt narrower and 5 pt shorter.
 test('the iPhone preview matches the real keyboard (402 pt, light, system default), measured in the simulator', () => {
   const m = previewMetrics('iphone', normalizeDocument(systemDefaultDocument()));
   const [r1, r2, r3, r4] = iphoneKeyRects(m, 402);
   const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 0.5, `${label}: ${actual} vs ${expected}`);
-  // Keyboard top to first key row: 9 + 40 + 3 + 1.
-  near(r1[0].y, 54, 'row 1 top');
+  // Keyboard top to first key row: 9 + 40 + 3 + 1.5.
+  near(r1[0].y, 54.5, 'row 1 top');
   near(r2[0].y - r1[0].y, 58, 'row pitch');
   near(r3[0].y - r2[0].y, 58, 'row pitch');
   near(r4[0].y - r3[0].y, 58, 'row pitch');
-  for (const rect of r1) { near(rect.w, 34.17, 'letter width'); near(rect.h, 50, 'key height'); }
+  for (const rect of r1) { near(rect.w, 34.17, 'letter width'); near(rect.h, 49, 'key height'); }
   near(r1[0].x, 4.75, 'left inset');
   near(402 - (r1[9].x + r1[9].w), 4.75, 'right inset');
   near(r1[1].x - (r1[0].x + r1[0].w), 5.5, 'gap across');

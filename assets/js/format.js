@@ -793,7 +793,7 @@ const SYSTEM_DEFAULT = normalizeDocument({
     },
     typography: { family: 'system', weight: 'regular', keySize: 22, secondarySize: 10, candidateSize: 21 },
     keycap: { cornerRadius: 6, borderWidth: 0, shadow: 'none' },
-    spacing: { visualInsetX: 0.75, visualInsetY: 2 },
+    spacing: { visualInsetX: 0.75, visualInsetY: 2.5 },
   },
   candidateBar: {
     formatVersion: FORMAT_VERSION,
