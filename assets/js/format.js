@@ -93,8 +93,8 @@ const SKIN_FIELDS = [
   { path: 'keycap.cornerRadius', type: 'number', min: 0, max: 16, step: 0.5, default: 6, section: 'keycap' },
   { path: 'keycap.borderWidth', type: 'number', min: 0, max: 2, step: 0.5, default: 0, section: 'keycap' },
   { path: 'keycap.shadow', type: 'enum', values: ['none', 'subtle'], default: 'subtle', section: 'keycap' },
-  { path: 'spacing.visualInsetX', type: 'number', min: 0, max: 6, step: 0.5, default: 2, section: 'keycap' },
-  { path: 'spacing.visualInsetY', type: 'number', min: 0, max: 6, step: 0.5, default: 2, section: 'keycap' },
+  { path: 'spacing.visualInsetX', type: 'number', min: 0, max: 6, step: 0.25, default: 2, section: 'keycap' },
+  { path: 'spacing.visualInsetY', type: 'number', min: 0, max: 6, step: 0.25, default: 2, section: 'keycap' },
 ];
 
 const BAR_FIELDS = [
@@ -793,7 +793,7 @@ const SYSTEM_DEFAULT = normalizeDocument({
     },
     typography: { family: 'system', weight: 'regular', keySize: 22, secondarySize: 10, candidateSize: 21 },
     keycap: { cornerRadius: 6, borderWidth: 0, shadow: 'none' },
-    spacing: { visualInsetX: 0, visualInsetY: 1 },
+    spacing: { visualInsetX: 0.5, visualInsetY: 1.25 },
   },
   candidateBar: {
     formatVersion: FORMAT_VERSION,

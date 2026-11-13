@@ -63,8 +63,8 @@ test('iPhone draws the skin: gaps grow with the inset, radius and sizes follow t
   const plain = previewMetrics('iphone', normalizeDocument(systemDefaultDocument()));
   const custom = previewMetrics('iphone', edited());
   assert.equal(plain.refWidth, 402);
-  assert.equal(plain.capInsetX, 0);
-  assert.equal(plain.capInsetY, 1);
+  assert.equal(plain.capInsetX, 0.5);
+  assert.equal(plain.capInsetY, 1.25);
   assert.equal(custom.capInsetX, 3);
   assert.equal(custom.capInsetY, 4);
   assert.equal(custom.radius, 14);
@@ -72,30 +72,33 @@ test('iPhone draws the skin: gaps grow with the inset, radius and sizes follow t
   assert.ok(custom.font.letter > plain.font.letter);
   assert.equal(custom.bar.natural, false);
   assert.equal(plain.bar.natural, true);
-  // The default skin gives the measured gaps: 4 pt across, 4 + 2 x 1 = 6 pt down, keys 52 pt tall.
-  assert.equal(plain.gapX + 2 * plain.capInsetX, 4);
-  assert.equal(plain.rowGap + 2 * plain.capInsetY, 6);
-  assert.equal(plain.rowHeight - 2 * plain.capInsetY, 52);
+  // The default skin's gaps match Android's: 4 + 2 x 0.5 = 5 pt across, 4 + 2 x 1.25 = 6.5 pt down,
+  // keys 54 - 2.5 = 51.5 pt tall.
+  assert.equal(plain.gapX + 2 * plain.capInsetX, 5);
+  assert.equal(plain.rowGap + 2 * plain.capInsetY, 6.5);
+  assert.equal(plain.rowHeight - 2 * plain.capInsetY, 51.5);
 });
 
+// The key cells were measured in the simulator; each cap sits inside its cell by the skin's inset
+// (0.5 across, 1.25 down for the system default), so caps are 1 pt narrower and 2.5 pt shorter.
 test('the iPhone preview matches the real keyboard (402 pt, light, system default), measured in the simulator', () => {
   const m = previewMetrics('iphone', normalizeDocument(systemDefaultDocument()));
   const [r1, r2, r3, r4] = iphoneKeyRects(m, 402);
   const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 0.5, `${label}: ${actual} vs ${expected}`);
   // Keyboard top to first key row: 9 + 40 + 3 + 1.
-  near(r1[0].y, 53, 'row 1 top');
+  near(r1[0].y, 53.25, 'row 1 top');
   near(r2[0].y - r1[0].y, 58, 'row pitch');
   near(r3[0].y - r2[0].y, 58, 'row pitch');
   near(r4[0].y - r3[0].y, 58, 'row pitch');
-  for (const rect of r1) { near(rect.w, 35.67, 'letter width'); near(rect.h, 52, 'key height'); }
-  near(r1[0].x, 4, 'left inset');
-  near(402 - (r1[9].x + r1[9].w), 4, 'right inset');
-  near(r1[1].x - (r1[0].x + r1[0].w), 4, 'gap across');
-  near(r2[0].x, 24, 'row 2 indent');
-  near(r3[0].w, 55.67, 'shift width');
-  near(r3[8].w, 55.67, 'delete width');
-  near(r3[1].x, 4 + 55.67 + 4, 'z position');
-  [40, 40, 40, 134, 40, 80].forEach((width, index) => near(r4[index].w, width, `bottom key ${index}`));
+  for (const rect of r1) { near(rect.w, 34.67, 'letter width'); near(rect.h, 51.5, 'key height'); }
+  near(r1[0].x, 4.5, 'left inset');
+  near(402 - (r1[9].x + r1[9].w), 4.5, 'right inset');
+  near(r1[1].x - (r1[0].x + r1[0].w), 5, 'gap across');
+  near(r2[0].x, 24.5, 'row 2 indent');
+  near(r3[0].w, 54.67, 'shift width');
+  near(r3[8].w, 54.67, 'delete width');
+  near(r3[1].x, 4 + 55.67 + 4 + 0.5, 'z position');
+  [39, 39, 39, 133, 39, 79].forEach((width, index) => near(r4[index].w, width, `bottom key ${index}`));
 });
 
 test('the iPhone toolbar has three equal buttons, centred as measured in the simulator', () => {
