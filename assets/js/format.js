@@ -800,8 +800,8 @@ const SYSTEM_DEFAULT = normalizeDocument({
     id: SYSTEM_DEFAULT_ID,
     name: '系统默认',
     compositionRow: { visible: 'composingOnly' },
-    collapsed: { height: 40, cellPaddingX: 7, cellSpacing: 0, fillsAvailableWidth: false },
-    expanded: { mode: 'adaptive', columns: 2, rowSpacing: 0, columnSpacing: 0, fullRowTextLength: 8 },
+    collapsed: { height: 40, cellPaddingX: 7, cellSpacing: 5, fillsAvailableWidth: false },
+    expanded: { mode: 'adaptive', columns: 2, rowSpacing: 0, columnSpacing: 5, fullRowTextLength: 8 },
     controls: { pagePosition: 'both', showsExpand: true },
   },
 });
