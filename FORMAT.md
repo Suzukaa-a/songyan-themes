@@ -90,5 +90,8 @@ constant, whatever the panel colour or background is. Both apps and the editor u
 
 ### iOS
 
-iOS ignores `background`: the system draws the keyboard's surface there. Translucent key colours are
-laid over that surface. Everything else in the file applies as in version 1.
+The system draws the keyboard's own surface on iOS. `background` is drawn only once the user turns
+on 显示外观背景 (show the appearance background) under 键盘外观: then it fills a band behind the keys,
+edge to edge, with soft top and bottom edges; the candidate bar and the system's bottom row stay on
+the system surface. Translucent key colours are laid over whichever is below them. Everything else in
+the file applies as in version 1.
