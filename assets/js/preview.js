@@ -10,11 +10,49 @@
 //    corner radius and type are the keyboard's own and the same for every skin. Its candidate row takes
 //    the bar's height, padding and spacing only when they differ from the default bar.
 //  - iPhone draws the keys from the skin's own numbers on top of the system keyboard surface, and the
-//    skin's background (once 显示外观背景 is on) behind the keys only.
+//    skin's keyboard colour and background (once 显示外观背景 is on) behind the keys only.
 
-import { resolvedColors, contrasting, luminance, SYSTEM_SURFACE } from './format.js';
+import { resolvedColors, contrasting, luminance, SYSTEM_SURFACE, CONTRAST_PAIRS, over, separateKeys } from './format.js';
 
 const GRADIENT_ANGLE = { vertical: 'to bottom', horizontal: 'to right', diagonal: 'to bottom right' };
+
+/** Average colour of each background image, worked out once it has loaded (the key contrast needs one colour). */
+const averageCache = new Map();
+function imageAverage(dataUri, onReady) {
+  if (averageCache.has(dataUri)) return averageCache.get(dataUri);
+  averageCache.set(dataUri, null);
+  const url = imageUrl(dataUri);
+  if (url && typeof Image !== 'undefined') {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0, 1, 1);
+      const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+      averageCache.set(dataUri, `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()}`);
+      onReady?.();
+    };
+    image.src = url;
+  }
+  return null;
+}
+
+/**
+ * The colours the iPhone keys sit on when 显示外观背景 is on: the skin's keyboard colour, or over it a
+ * solid colour, every gradient stop, or an image's average (the keyboard colour until the image has
+ * loaded; `onReady` then asks for a redraw).
+ */
+export function traySamples(panel, background, mode, onReady) {
+  const base = over(panel, IOS_SURFACE[mode]);
+  if (!background) return [base];
+  let colors = [];
+  if (background.type === 'solid') colors = [background.color];
+  else if (background.type === 'linearGradient') colors = background.colors ?? [background.from, background.to];
+  else if (background.type === 'image') colors = [imageAverage(background.image, onReady)].filter(Boolean);
+  return colors.length ? colors.map((hex) => over(hex, base)) : [base];
+}
 
 /** Blob URLs for background images, so a big data URI is not parsed again on every redraw. */
 const urlCache = new Map();
@@ -334,6 +372,20 @@ export function renderPreview(host, doc, options) {
   const colors = resolvedColors(doc.skin, mode);
   const m = previewMetrics(platform, doc);
   const android = platform === 'android';
+  // With 显示外观背景 on, iPhone draws the keyboard colour and background behind the keys, as Android
+  // draws them behind its whole keyboard, and separates the keys from them (KeyContrast in the app).
+  const tray = !android && !expanded;
+  const samples = tray ? traySamples(colors.panel, doc.skin.variants?.[mode]?.background, mode, options.onAsync) : [];
+  let veil = null;
+  if (samples.length) {
+    const separated = separateKeys(colors.key, colors.control, samples);
+    colors.key = separated.key;
+    colors.control = separated.control;
+    veil = separated.veil;
+    for (const [role, on] of Object.entries(CONTRAST_PAIRS)) {
+      if (on === 'key' || on === 'control') colors[role] = contrasting(colors[role], colors[on]);
+    }
+  }
 
   host.replaceChildren();
   host.dataset.platform = platform;
@@ -412,13 +464,13 @@ export function renderPreview(host, doc, options) {
   }
   keyboard.append(typing ? buildStrip(t, expanded, onToggleExpand, android) : buildToolbar(m, t));
   keyboard.append(expanded ? buildExpanded(m) : buildKeys(m, t));
-  // iPhone draws the skin's background behind the keys only, edge to edge with soft top and bottom
-  // edges, once the app's 键盘外观 > 显示外观背景 is on.
-  const tray = !android && !expanded ? backgroundCss(doc.skin.variants?.[mode]?.background) : null;
+  // The band behind the keys: edge to edge, soft top and bottom edges.
   if (tray) {
+    const layers = [backgroundCss(doc.skin.variants?.[mode]?.background), `linear-gradient(${colors.panel}, ${colors.panel})`];
+    if (veil) layers.unshift(`linear-gradient(${veil}, ${veil})`);
     const keys = keyboard.querySelector('.pv-keys');
     keys.classList.add('pv-tray');
-    keys.style.setProperty('--tray', tray);
+    keys.style.setProperty('--tray', layers.filter(Boolean).join(', '));
   }
   keyboard.append(buildSystemRow(m, t));
   if (android && !expanded) fitAndroidLabels(host, keyboard, m.refWidth);

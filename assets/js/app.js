@@ -156,6 +156,7 @@ function refreshPreview() {
     expanded: state.expanded,
     t,
     onToggleExpand: () => { state.expanded = !state.expanded; refreshPreview(); },
+    onAsync: refreshPreview,
   });
   const note = $('#preview-note');
   note.replaceChildren(t('previewHint'));

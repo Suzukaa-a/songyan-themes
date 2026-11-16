@@ -5,8 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import {
   decodeDocument, decodeImported, encodeDocument, FormatError, ErrorCode, resolvedColors,
-  contrasting, systemDefaultDocument, MAX_DOCUMENT_BYTES, readDocument,
-} from '../assets/js/format.js';
+  contrasting, systemDefaultDocument, MAX_DOCUMENT_BYTES, readDocument, separateKeys, over, contrastRatio } from '../assets/js/format.js';
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), 'ios-interop');
 const files = (suffix) => readdirSync(dir).filter((name) => name.endsWith(suffix)).sort();
@@ -289,4 +288,19 @@ test('importing a built-in file and exporting it again only changes the identity
     const swapped = encodeDocument(original).replaceAll(`"${original.id}"`, '"copy-id"');
     assert.equal(encodeDocument(copy), swapped, name);
   }
+});
+
+test('iPhone keys part from the background they are drawn on, as the app does', () => {
+  // 松烟墨韵 over a pale green gradient: white keys cannot get whiter, so the band takes a veil.
+  const band = ['#E6EDE3', '#C8D7CA'];
+  const { key, control, veil } = separateKeys('#FFFFFF', '#DDE3DA', band);
+  assert.ok(veil, 'a veil when the letter key is at the end of the scale');
+  const veiled = band.map((hex) => over(veil, hex));
+  for (const hex of veiled) {
+    assert.ok(contrastRatio(key, hex) >= 1.29);
+    assert.ok(contrastRatio(control, hex) >= 1.19);
+  }
+  assert.ok(contrastRatio(control, key) >= 1.24);
+  // A skin that already separates is left as authored.
+  assert.deepEqual(separateKeys('#FFFFFF', '#ADB2BC', ['#3A3F48']), { key: '#FFFFFF', control: '#ADB2BC', veil: null });
 });

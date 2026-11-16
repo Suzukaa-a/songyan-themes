@@ -90,8 +90,12 @@ constant, whatever the panel colour or background is. Both apps and the editor u
 
 ### iOS
 
-The system draws the keyboard's own surface on iOS. `background` is drawn only once the user turns
-on 显示外观背景 (show the appearance background) under 键盘外观: then it fills a band behind the keys,
-edge to edge, with soft top and bottom edges; the candidate bar and the system's bottom row stay on
-the system surface. Translucent key colours are laid over whichever is below them. Everything else in
-the file applies as in version 1.
+The system draws the keyboard's own surface on iOS. Once the user turns on 显示外观背景 (show the
+appearance background) under 键盘外观, the keyboard draws `panel` and, over it, `background` in a
+band behind the keys, edge to edge with soft top and bottom edges, as Android draws them behind its
+whole keyboard; the candidate bar and the system's bottom row stay on the system surface. The letter
+and function key fills are then kept apart from that band (the Android keyboard's key contrast rule:
+1.3:1 letter key to background, 1.25:1 function key to letter key, 1.2:1 function key to background),
+and a faint veil darkens or lightens the band when a letter key is already at the end of the scale.
+Translucent key colours are laid over whichever is below them. Everything else in the file applies as
+in version 1.

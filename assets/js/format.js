@@ -531,6 +531,62 @@ export function over(fg, bg) {
 /** The surface the system draws under every iOS keyboard; a translucent key is measured over it. */
 export const SYSTEM_SURFACE = Object.freeze({ light: '#E0E1E8', dark: '#222223' });
 
+/** The mean of opaque colours, for judging translucent fills over a background of several colours. */
+export function averageColor(hexes) {
+  const sums = [0, 0, 0];
+  for (const hex of hexes) channels(hex).forEach((value, index) => { sums[index] += value; });
+  const n = Math.max(1, hexes.length);
+  return `#${sums.map((sum) => Math.round((sum / n) * 255).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
+/**
+ * Keeps the keycaps readable as keys over the skin's background on iPhone, the rule Songyan for iOS
+ * applies (KeyContrast, after the Android keyboard's): a letter key stands out from the background
+ * (1.3:1), a function key from the letter key (1.25:1) and from the background (1.2:1). Only the two
+ * fills move, and only as far as needed. Every sample counts, so a gradient keeps the keys apart at
+ * both ends. When the letter key is already at the end of the scale, the background takes a faint
+ * veil instead. Returns `{ key, control, veil }`; `veil` is null when none is needed.
+ */
+export function separateKeys(key, control, samples) {
+  if (!samples.length || alphaOf(key) < 1 || alphaOf(control) < 1) return { key, control, veil: null };
+  const tint = (end, amount) => withAlpha(end, amount);
+  const least = (minimum, measure) => {
+    if (measure(1) < minimum) return 1;
+    let low = 0;
+    let high = 1;
+    for (let i = 0; i < 12; i += 1) {
+      const mid = (low + high) / 2;
+      if (measure(mid) >= minimum) high = mid; else low = mid;
+    }
+    return high;
+  };
+  const push = (color, minimum, towardsWhite, measure) => {
+    const end = towardsWhite ? '#FFFFFF' : '#000000';
+    return over(tint(end, least(minimum, (t) => measure(over(tint(end, t), color)))), color);
+  };
+  let background = samples.map((hex) => hex.slice(0, 7));
+  let veil = null;
+  const worst = (color) => Math.min(...background.map((hex) => contrastRatio(color, hex)));
+  const keyLighter = luminance(key) >= luminance(averageColor(background));
+  if (worst(key) < 1.3) key = push(key, 1.3, keyLighter, worst);
+  if (worst(key) < 1.3) {
+    const end = keyLighter ? '#000000' : '#FFFFFF';
+    const original = background;
+    const amount = least(1.3, (t) => Math.min(...original.map((hex) => contrastRatio(key, over(tint(end, t), hex)))));
+    veil = tint(end, amount);
+    background = original.map((hex) => over(veil, hex));
+  }
+  if (contrastRatio(control, key) < 1.25) {
+    const lighter = luminance(control) > luminance(key);
+    control = push(control, 1.25, lighter, (c) => contrastRatio(c, key));
+  }
+  if (worst(control) < 1.2) {
+    const towardsWhite = luminance(averageColor(background)) <= 0.18;
+    control = push(control, 1.2, towardsWhite, (c) => Math.min(worst(c) / 1.2, contrastRatio(c, key) / 1.25) * 1.2);
+  }
+  return { key, control, veil };
+}
+
 /**
  * Reads what a person types into a colour box: `#abc`, `abc`, `#aabbcc`, `aabbcc` or the 8-digit form with
  * alpha, with stray spaces. Returns the upper-case `#RRGGBB` (or `#RRGGBBAA`) form, or null when it is not a colour.
