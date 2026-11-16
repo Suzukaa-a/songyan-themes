@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, iphoneToolbarCentres } from '../assets/js/preview.js';
+import { previewMetrics, effectiveBarHeight, IOS_SURFACE, iphoneKeyRects, iphoneToolbarCentres, expandedTable } from '../assets/js/preview.js';
 import { PRESETS, presetById } from '../assets/js/presets.js';
 import { systemDefaultDocument, normalizeDocument } from '../assets/js/format.js';
 
@@ -151,4 +151,18 @@ test('background CSS: solid, gradients of every direction, images by align', asy
   const image = { type: 'image', image: 'data:image/png;base64,AAAA', align: 'bottom' };
   assert.equal(backgroundCss(image, () => 'blob:x'), 'url("blob:x") center bottom / cover no-repeat');
   assert.equal(backgroundCss(image, () => null), null);
+});
+
+test('the flowing list is a table of equal columns that keeps the column gap, like both keyboards', () => {
+  // Three in four of the first ten need 44, so 300 wide with 5 apart holds six columns of 45.83.
+  const widths = [...Array(9).fill(30), 150, ...Array(6).fill(30)];
+  const { columns, rows } = expandedTable(widths, 300, 5);
+  assert.equal(columns, 6);
+  for (const row of rows.slice(0, -1)) {
+    assert.equal(row.reduce((sum, cell) => sum + cell.span, 0), columns, 'every full row reaches the edge');
+  }
+  const long = rows.flat().find((cell) => cell.index === 9);
+  assert.equal(long.span, 4, 'a long candidate spans the columns it needs, counting the gaps between them');
+  assert.deepEqual(rows.flat().map((cell) => cell.index), widths.map((_, i) => i), 'order is kept');
+  assert.equal(expandedTable(widths, 300, 0).columns, 6, 'without a gap the same candidates fit as many columns');
 });

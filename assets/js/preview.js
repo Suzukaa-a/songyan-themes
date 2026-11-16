@@ -9,7 +9,8 @@
 //  - Android takes only the colours (and whether a key border exists) from the skin. Key size, gaps,
 //    corner radius and type are the keyboard's own and the same for every skin. Its candidate row takes
 //    the bar's height, padding and spacing only when they differ from the default bar.
-//  - iPhone draws the keys from the skin's own numbers on top of the system keyboard surface.
+//  - iPhone draws the keys from the skin's own numbers on top of the system keyboard surface, and the
+//    skin's background (once 显示外观背景 is on) behind the keys only.
 
 import { resolvedColors, contrasting, luminance, SYSTEM_SURFACE } from './format.js';
 
@@ -411,6 +412,14 @@ export function renderPreview(host, doc, options) {
   }
   keyboard.append(typing ? buildStrip(t, expanded, onToggleExpand, android) : buildToolbar(m, t));
   keyboard.append(expanded ? buildExpanded(m) : buildKeys(m, t));
+  // iPhone draws the skin's background behind the keys only, edge to edge with soft top and bottom
+  // edges, once the app's 键盘外观 > 显示外观背景 is on.
+  const tray = !android && !expanded ? backgroundCss(doc.skin.variants?.[mode]?.background) : null;
+  if (tray) {
+    const keys = keyboard.querySelector('.pv-keys');
+    keys.classList.add('pv-tray');
+    keys.style.setProperty('--tray', tray);
+  }
   keyboard.append(buildSystemRow(m, t));
   if (android && !expanded) fitAndroidLabels(host, keyboard, m.refWidth);
 }
@@ -454,10 +463,72 @@ function buildToolbar(m, t) {
   return bar;
 }
 
+/** The narrowest candidate cell both keyboards draw. */
+const MIN_CELL = 44;
+/** How many leading candidates decide the table's column width. */
+const TABLE_SAMPLE = 10;
+
+/**
+ * The flowing ("adaptive") list as both keyboards lay it out (CandidateExpandedFlow.table on iPhone,
+ * ExpandedFlowLayout.table on Android): equal columns as wide as three in four of the first ten
+ * candidates need, `gap` apart; a longer candidate spans as many whole columns as it needs, and the
+ * last cell of a full row takes the columns left over, so every full row reaches the edge.
+ * Returns { columns, rows: [[{ index, span }]] }.
+ */
+export function expandedTable(widths, available, gap = 0) {
+  if (!widths.length || !(available > 0)) return { columns: 0, rows: [] };
+  const naturals = widths.map((w) => Math.max(MIN_CELL, w));
+  const sample = naturals.slice(0, TABLE_SAMPLE).sort((a, b) => a - b);
+  const target = sample[Math.floor((sample.length * 3) / 4)];
+  const columns = Math.max(1, Math.floor((available + gap) / (target + gap)));
+  const unit = Math.max(1, (available - gap * (columns - 1)) / columns);
+  const rows = [];
+  let row = [];
+  let used = 0;
+  const flush = (fill) => {
+    if (!row.length) return;
+    if (fill) row[row.length - 1].span += columns - used;
+    rows.push(row);
+    row = [];
+    used = 0;
+  };
+  naturals.forEach((natural, index) => {
+    const span = Math.min(columns, Math.max(1, Math.ceil((natural + gap) / (unit + gap) - 0.001)));
+    if (used + span > columns) flush(true);
+    row.push({ index, span });
+    used += span;
+  });
+  flush(false);
+  return { columns, rows };
+}
+
+/** The flowing list: a table ruled with hairlines that run down the middle of the gaps. */
+function buildTable(m, items) {
+  const area = el('div', 'pv-expanded pv-table');
+  // Estimated like the keyboards do before measuring: one em per character plus the cell padding.
+  const widths = items.map((text) => [...text].length * m.font.candidate + 2 * m.bar.chipPad);
+  const available = m.refWidth - 12;
+  const { columns, rows } = expandedTable(widths, available, m.expanded.colGap);
+  area.style.setProperty('--exp-columns', String(columns));
+  rows.forEach((cells, rowIndex) => {
+    const row = el('div', 'pv-table-row');
+    if (rowIndex === 0) row.dataset.first = 'true';
+    for (const { index, span } of cells) {
+      const item = el('span', 'pv-item');
+      item.append(el('span', 'pv-item-text', items[index]));
+      item.style.gridColumn = `span ${span}`;
+      row.append(item);
+    }
+    area.append(row);
+  });
+  return area;
+}
+
 function buildExpanded(m) {
   const { mode, fullRowLength } = m.expanded;
-  const area = el('div', `pv-expanded pv-${mode}`);
   const items = [...CANDIDATES, ...LONG_CANDIDATES, ...CANDIDATES.slice(2, 8), ...CANDIDATES];
+  if (mode === 'adaptive') return buildTable(m, items);
+  const area = el('div', `pv-expanded pv-${mode}`);
   items.forEach((text, index) => {
     const item = el('span', 'pv-item');
     item.append(el('span', 'pv-item-text', text));
