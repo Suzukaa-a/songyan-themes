@@ -2,11 +2,20 @@
 
 import { contrastRatio, isHexColorAlpha, normalizeHex, over } from './format.js';
 
-// The page surfaces from style.css; the accent has to stay visible on all of them.
-const SURFACES = {
-  light: { bg: '#F3F4F2', card: '#FFFFFF' },
-  dark: { bg: '#121513', card: '#1B1F1C' },
+// The page's neutral colours from style.css. They carry a faint green, the hue of the default accent; for another
+// accent they take its hue instead, keeping their lightness and saturation so every contrast stays as designed.
+const NEUTRALS = {
+  light: {
+    '--bg': '#F3F4F2', '--card': '#FFFFFF', '--field': '#FFFFFF', '--text': '#1C211E',
+    '--muted': '#5D685F', '--line': '#D5DAD6', '--line-strong': '#B8C0BA',
+  },
+  dark: {
+    '--bg': '#121513', '--card': '#1B1F1C', '--field': '#232825', '--text': '#E4E8E5',
+    '--muted': '#97A39A', '--line': '#313832', '--line-strong': '#4A544C',
+  },
 };
+// Below this saturation an accent reads as grey, and so do the neutrals.
+const GREY = 0.08;
 const CONTROL_CONTRAST = 3;
 const TEXT_CONTRAST = 4.5;
 const TINT = { light: 0.14, dark: 0.14 };
@@ -39,9 +48,19 @@ function fromHsl([h, s, l]) {
 
 const mix = (a, b, amount) => toHex(toRgb(a).map((v, i) => v * (1 - amount) + toRgb(b)[i] * amount));
 
+/** The stylesheet neutrals turned to the accent's hue, or to plain grey for a grey accent. */
+function neutralsFor(hex, scheme) {
+  const [hue, saturation] = toHsl(toRgb(hex));
+  const out = {};
+  for (const [name, value] of Object.entries(NEUTRALS[scheme])) {
+    const [, s, l] = toHsl(toRgb(value));
+    out[name] = fromHsl([hue, saturation < GREY ? 0 : s, l]);
+  }
+  return out;
+}
+
 /** Moves lightness away from the page (darker on light, lighter on dark) until the accent is usable as a control colour. */
-function visible(hex, scheme) {
-  const { bg, card } = SURFACES[scheme];
+function visible(hex, scheme, bg, card) {
   const ok = (c) => Math.min(contrastRatio(c, bg), contrastRatio(c, card)) >= CONTROL_CONTRAST;
   if (ok(hex)) return hex;
   const [h, s, l] = toHsl(toRgb(hex));
@@ -55,18 +74,21 @@ function visible(hex, scheme) {
 }
 
 /**
- * The page accent for an appearance and a colour scheme ('light' or 'dark'), or null when the appearance sets
- * none (system default, dynamic colour), in which case the stylesheet values stay.
+ * The page accent for an appearance and a colour scheme ('light' or 'dark'), with the page neutrals in its hue
+ * (`neutrals`, keyed by CSS variable), or null when the appearance sets none (system default, dynamic colour), in
+ * which case the stylesheet values stay.
  */
 export function pageAccent(doc, scheme) {
   const mode = scheme === 'dark' ? 'dark' : 'light';
   const raw = doc?.skin?.variants?.[mode]?.colors?.accent;
   if (!isHexColorAlpha(raw)) return null;
-  const { bg } = SURFACES[mode];
-  const accent = visible(over(raw, bg), mode);
+  const opaque = over(raw, NEUTRALS[mode]['--bg']);
+  const neutrals = neutralsFor(opaque, mode);
+  const bg = neutrals['--bg'];
+  const accent = visible(opaque, mode, bg, neutrals['--card']);
   const dark = contrastRatio('#000000', accent);
   const light = contrastRatio('#FFFFFF', accent);
   const accentText = dark >= light ? '#000000' : '#FFFFFF';
   if (Math.max(dark, light) < TEXT_CONTRAST) return null;
-  return { accent: normalizeHex(accent), accentText, accentSoft: mix(bg, accent, TINT[mode]) };
+  return { accent: normalizeHex(accent), accentText, accentSoft: mix(bg, accent, TINT[mode]), neutrals };
 }

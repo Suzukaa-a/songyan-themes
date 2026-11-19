@@ -103,6 +103,7 @@ function showError(host, error) {
 // ------------------------------------------------------------------ page accent
 const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
 const themeMeta = document.querySelector('meta[name="theme-color"]');
+const NEUTRAL_VARS = ['--bg', '--card', '--field', '--text', '--muted', '--line', '--line-strong'];
 
 /** Inline values override the stylesheet; removing them restores its light and dark defaults. */
 function applyPageAccent() {
@@ -110,6 +111,9 @@ function applyPageAccent() {
   const style = document.documentElement.style;
   for (const [name, key] of [['--accent', 'accent'], ['--accent-text', 'accentText'], ['--accent-soft', 'accentSoft']]) {
     if (accent) style.setProperty(name, accent[key]); else style.removeProperty(name);
+  }
+  for (const name of NEUTRAL_VARS) {
+    if (accent) style.setProperty(name, accent.neutrals[name]); else style.removeProperty(name);
   }
   if (themeMeta) themeMeta.content = accent ? accent.accent : colorScheme.matches ? '#121513' : '#f3f4f2';
 }

@@ -54,3 +54,33 @@ test('a built-in preset yields a usable accent in both schemes', () => {
   const doc = presetById('builtin-songyan').document;
   for (const scheme of ['light', 'dark']) assert.ok(pageAccent(doc, scheme));
 });
+
+test('the page neutrals take the accent hue and keep their contrast', () => {
+  for (const hex of ['#7C4DFF', '#E91E63', '#1A73E8', '#FFD54F', '#2A593F']) {
+    for (const scheme of ['light', 'dark']) {
+      const n = pageAccent(withAccent(hex, hex), scheme).neutrals;
+      assert.ok(contrastRatio(n['--text'], n['--bg']) >= 12, `${hex} ${scheme} text`);
+      assert.ok(contrastRatio(n['--muted'], n['--card']) >= 4.5, `${hex} ${scheme} muted`);
+      assert.ok(contrastRatio(n['--line-strong'], n['--card']) >= 1.4, `${hex} ${scheme} line`);
+    }
+  }
+});
+
+test('a purple accent leaves no green in the page', () => {
+  const n = pageAccent(withAccent('#7C4DFF', '#B39DFF'), 'dark').neutrals;
+  for (const value of Object.values(n)) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16));
+    assert.ok(g <= Math.max(r, b), value);
+  }
+});
+
+test('a grey accent makes the neutrals plain grey', () => {
+  const n = pageAccent(withAccent('#2B2B2B', '#D0D0D0'), 'light').neutrals;
+  for (const value of Object.values(n)) assert.equal(value.slice(1, 3), value.slice(3, 5), value);
+});
+
+test('the default green accent keeps the stylesheet neutrals', () => {
+  const n = pageAccent(withAccent('#2A593F', '#8FD7AA'), 'dark').neutrals;
+  assert.ok(contrastRatio(n['--bg'], '#121513') < 1.02);
+  assert.ok(contrastRatio(n['--card'], '#1B1F1C') < 1.02);
+});
