@@ -14,6 +14,7 @@ import { DEFAULT_PARAMS, BLUR_MAX, DIM_MAX, BRIGHT_MAX, BAKED_ALIGN, KEYBOARD_AR
 import { PRESETS, presetById } from './presets.js';
 import { translator, describeError, LANGS } from './i18n.js';
 import { renderPreview, previewMetrics } from './preview.js';
+import { pageAccent } from './accent.js';
 
 const DRAFT_KEY = 'songyan-themes.draft.v1';
 const BASELINE_KEY = 'songyan-themes.baseline.v1';
@@ -99,10 +100,26 @@ function showError(host, error) {
   }
 }
 
+// ------------------------------------------------------------------ page accent
+const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+
+/** Inline values override the stylesheet; removing them restores its light and dark defaults. */
+function applyPageAccent() {
+  const accent = pageAccent(state.doc, colorScheme.matches ? 'dark' : 'light');
+  const style = document.documentElement.style;
+  for (const [name, key] of [['--accent', 'accent'], ['--accent-text', 'accentText'], ['--accent-soft', 'accentSoft']]) {
+    if (accent) style.setProperty(name, accent[key]); else style.removeProperty(name);
+  }
+  if (themeMeta) themeMeta.content = accent ? accent.accent : colorScheme.matches ? '#121513' : '#f3f4f2';
+}
+colorScheme.addEventListener('change', applyPageAccent);
+
 // ------------------------------------------------------------------ document edits
 let saveTimer = 0;
 function afterChange() {
   refreshPreview();
+  applyPageAccent();
   updateHints();
   updateEnabled();
   updateBarHint();
